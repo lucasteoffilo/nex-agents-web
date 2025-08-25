@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login no Navegador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .logs {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teste de Login no Navegador</h1>
+        
+        <div class="info">
+            <h3>Estado Atual:</h3>
+            <p><strong>Cookies:</strong> <span id="cookies">Carregando...</span></p>
+            <p><strong>LocalStorage Token:</strong> <span id="localStorage">Carregando...</span></p>
+        </div>
+        
+        <div>
+            <button onclick="testLogin()">Fazer Login</button>
+            <button onclick="setCookie()">Definir Cookie Teste</button>
+            <button onclick="goToDashboard()">Ir para Dashboard</button>
+            <button onclick="clearAll()">Limpar Tudo</button>
+            <button onclick="updateInfo()">Atualizar Info</button>
+            <button onclick="testMiddleware()">Testar Middleware</button>
+        </div>
+        
+        <div class="logs" id="logs"></div>
+    </div>
+
+    <script>
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logs = document.getElementById('logs');
+            logs.innerHTML += `[${timestamp}] ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function updateInfo() {
+            document.getElementById('cookies').textContent = document.cookie || 'Nenhum cookie';
+            document.getElementById('localStorage').textContent = localStorage.getItem('nex_token') || 'Não encontrado';
+            addLog('Informações atualizadas');
+        }
+
+        async function testLogin() {
+            try {
+                addLog('Iniciando login...');
+                
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@test.com',
+                        password: 'Password123!'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addLog(`Login bem-sucedido! Token: ${data.accessToken.substring(0, 20)}...`);
+                
+                // Salvar no localStorage
+                localStorage.setItem('nex_token', data.accessToken);
+                if (data.refreshToken) {
+                    localStorage.setItem('nex_refresh_token', data.refreshToken);
+                }
+                addLog('Token salvo no localStorage');
+                
+                // Salvar nos cookies
+                document.cookie = `nex_token=${data.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+                addLog('Token salvo nos cookies');
+                
+                updateInfo();
+                
+                addLog('Aguardando 2 segundos antes de redirecionar...');
+                setTimeout(() => {
+                    addLog('Redirecionando para dashboard...');
+                    window.location.href = '/dashboard';
+                }, 2000);
+                
+            } catch (error) {
+                addLog(`Erro no login: ${error.message}`);
+            }
+        }
+
+        function setCookie() {
+            const testToken = 'test-token-123-' + Date.now();
+            document.cookie = `nex_token=${testToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`;
+            addLog(`Cookie de teste definido: ${testToken}`);
+            updateInfo();
+        }
+
+        function clearAll() {
+            localStorage.removeItem('nex_token');
+            localStorage.removeItem('nex_refresh_token');
+            document.cookie = 'nex_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            addLog('Todos os tokens removidos');
+            updateInfo();
+        }
+
+        function goToDashboard() {
+            addLog('Navegando para dashboard...');
+            window.location.href = '/dashboard';
+        }
+
+        async function testMiddleware() {
+            try {
+                addLog('Testando middleware...');
+                const response = await fetch('/dashboard', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                addLog(`Resposta do middleware: ${response.status} ${response.statusText}`);
+                if (response.redirected) {
+                    addLog(`Redirecionado para: ${response.url}`);
+                }
+            } catch (error) {
+                addLog(`Erro ao testar middleware: ${error.message}`);
+            }
+        }
+
+        // Inicializar
+        window.onload = function() {
+            addLog('Página carregada');
+            updateInfo();
+        };
+    </script>
+</body>
+</html>
