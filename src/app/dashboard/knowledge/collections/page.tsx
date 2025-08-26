@@ -1,21 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,42 +39,35 @@ import {
   AlertCircle,
   Loader2,
   Pause,
-  Play
+  Play,
+  EyeOff,
+  Globe,
+  Lock,
+  Building,
+  RefreshCw
 } from 'lucide-react';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import Link from 'next/link';
+import collectionService, { Collection } from '@/services/collection-service';
+import { toast } from 'sonner';
 
-interface KnowledgeBaseCollection {
-  id: string;
-  name: string;
-  description: string;
-  slug: string;
-  documentCount: number;
-  agentCount: number;
-  tags: string[];
-  isActive: boolean;
-  visibility: 'public' | 'private' | 'internal';
-  createdBy: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  updatedBy: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
+// Usando a interface Collection do serviço
+type KnowledgeBaseCollection = Collection & {
+  slug?: string;
+  agentCount?: number;
   lastSyncAt?: string;
-  syncStatus: 'synced' | 'syncing' | 'error' | 'pending';
-  metadata: {
-    totalSize: number;
-    avgDocumentSize: number;
-    languages: string[];
-    categories: string[];
+  syncStatus?: 'synced' | 'syncing' | 'error' | 'pending';
+  createdBy?: {
+    id: string;
+    name: string;
+    avatar?: string;
   };
-}
+  updatedBy?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+};
 
 const mockCollections: KnowledgeBaseCollection[] = [
   {
@@ -263,83 +248,114 @@ function formatBytes(bytes: number): string {
 }
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<KnowledgeBaseCollection[]>(mockCollections);
+  const [collections, setCollections] = useState<KnowledgeBaseCollection[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedVisibility, setSelectedVisibility] = useState('all');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newCollection, setNewCollection] = useState({
-    name: '',
-    description: '',
-    tags: '',
-    visibility: 'internal' as 'public' | 'private' | 'internal'
-  });
+
+
+  // Carregar coleções da API
+  useEffect(() => {
+    loadCollections();
+  }, []);
+
+  const loadCollections = async () => {
+    try {
+      setLoading(true);
+      const response = await collectionService.getCollections();
+      if (response.success) {
+        setCollections(response.data.collections.map(collection => ({
+          ...collection,
+          slug: collection.name.toLowerCase().replace(/\s+/g, '-'),
+          agentCount: 0, // TODO: implementar contagem de agentes
+          syncStatus: collection.status === 'active' ? 'synced' : 'pending' as any,
+          lastSyncAt: collection.updatedAt,
+          visibility: collection.settings?.isPublic ? 'public' : 'internal' as any,
+          tags: collection.metadata?.tags || [],
+          createdBy: {
+            id: collection.userId,
+            name: 'Usuário'
+          },
+          updatedBy: {
+            id: collection.userId,
+            name: 'Usuário'
+          }
+        })));
+      } else {
+        toast.error('Erro ao carregar coleções');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar coleções:', error);
+      toast.error('Erro ao carregar coleções');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredCollections = collections.filter(collection => {
     const matchesSearch = collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         collection.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         collection.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (collection.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
+                         (collection.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = selectedStatus === 'all' || 
-                         (selectedStatus === 'active' && collection.isActive) ||
-                         (selectedStatus === 'inactive' && !collection.isActive) ||
-                         collection.syncStatus === selectedStatus;
-    const matchesVisibility = selectedVisibility === 'all' || collection.visibility === selectedVisibility;
+                         (selectedStatus === 'active' && collection.status === 'active') ||
+                         (selectedStatus === 'inactive' && collection.status === 'inactive') ||
+                         (collection.syncStatus === selectedStatus);
+    const matchesVisibility = selectedVisibility === 'all' || 
+                             (selectedVisibility === 'public' && collection.settings?.isPublic) ||
+        (selectedVisibility === 'internal' && !collection.settings?.isPublic);
     return matchesSearch && matchesStatus && matchesVisibility;
   });
 
   const stats = {
     total: collections.length,
-    active: collections.filter(c => c.isActive).length,
-    totalDocuments: collections.reduce((acc, c) => acc + c.documentCount, 0),
-    totalAgents: collections.reduce((acc, c) => acc + c.agentCount, 0),
-    totalSize: collections.reduce((acc, c) => acc + c.metadata.totalSize, 0)
+    active: collections.filter(c => c.status === 'active').length,
+    totalDocuments: collections.reduce((acc, c) => acc + (c.documentCount || 0), 0),
+    totalAgents: collections.reduce((acc, c) => acc + (c.agentCount || 0), 0),
+    totalSize: collections.reduce((acc, c) => acc + (c.totalSize || 0), 0)
   };
 
-  const handleCreateCollection = () => {
-    const collection: KnowledgeBaseCollection = {
-      id: `collection-${Date.now()}`,
-      name: newCollection.name,
-      description: newCollection.description,
-      slug: newCollection.name.toLowerCase().replace(/\s+/g, '-'),
-      documentCount: 0,
-      agentCount: 0,
-      tags: newCollection.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-      isActive: true,
-      visibility: newCollection.visibility,
-      createdBy: {
-        id: '1',
-        name: 'Usuário Atual'
-      },
-      updatedBy: {
-        id: '1',
-        name: 'Usuário Atual'
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      syncStatus: 'pending',
-      metadata: {
-        totalSize: 0,
-        avgDocumentSize: 0,
-        languages: [],
-        categories: []
+
+
+  const handleToggleStatus = async (collectionId: string) => {
+    try {
+      const collection = collections.find(c => c.id === collectionId);
+      if (!collection) return;
+
+      const newStatus = collection.status === 'active' ? 'inactive' : 'active';
+      const response = await collectionService.updateCollection(collectionId, {
+        status: newStatus
+      });
+
+      if (response.success) {
+        toast.success(`Coleção ${newStatus === 'active' ? 'ativada' : 'desativada'} com sucesso!`);
+        loadCollections(); // Recarregar a lista
+      } else {
+        toast.error('Erro ao alterar status da coleção');
       }
-    };
-
-    setCollections(prev => [collection, ...prev]);
-    setNewCollection({ name: '', description: '', tags: '', visibility: 'internal' });
-    setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast.error('Erro ao alterar status da coleção');
+    }
   };
 
-  const handleToggleStatus = (collectionId: string) => {
-    setCollections(prev => prev.map(collection =>
-      collection.id === collectionId
-        ? { ...collection, isActive: !collection.isActive, updatedAt: new Date().toISOString() }
-        : collection
-    ));
-  };
+  const handleDelete = async (collectionId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta coleção? Esta ação não pode ser desfeita.')) {
+      return;
+    }
 
-  const handleDelete = (collectionId: string) => {
-    setCollections(prev => prev.filter(collection => collection.id !== collectionId));
+    try {
+      const response = await collectionService.deleteCollection(collectionId);
+      if (response.success) {
+        toast.success('Coleção excluída com sucesso!');
+        loadCollections(); // Recarregar a lista
+      } else {
+        toast.error('Erro ao excluir coleção');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir coleção:', error);
+      toast.error('Erro ao excluir coleção');
+    }
   };
 
   return (
@@ -352,73 +368,12 @@ export default function CollectionsPage() {
             Organize e gerencie suas bases de conhecimento em collections temáticas
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Collection
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Collection</DialogTitle>
-              <DialogDescription>
-                Crie uma nova collection para organizar documentos relacionados.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input
-                  id="name"
-                  value={newCollection.name}
-                  onChange={(e) => setNewCollection(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Ex: FAQ Atendimento"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={newCollection.description}
-                  onChange={(e) => setNewCollection(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descreva o propósito desta collection..."
-                  rows={3}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
-                <Input
-                  id="tags"
-                  value={newCollection.tags}
-                  onChange={(e) => setNewCollection(prev => ({ ...prev, tags: e.target.value }))}
-                  placeholder="faq, atendimento, suporte"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="visibility">Visibilidade</Label>
-                <select
-                  id="visibility"
-                  value={newCollection.visibility}
-                  onChange={(e) => setNewCollection(prev => ({ ...prev, visibility: e.target.value as any }))}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value="internal">Interno</option>
-                  <option value="public">Público</option>
-                  <option value="private">Privado</option>
-                </select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateCollection} disabled={!newCollection.name.trim()}>
-                Criar Collection
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Link href="/dashboard/knowledge/collections/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Collection
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -521,8 +476,17 @@ export default function CollectionsPage() {
         </select>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Carregando coleções...</span>
+        </div>
+      )}
+
       {/* Collections Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {!loading && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredCollections.map((collection) => {
           const StatusIcon = getStatusIcon(collection.syncStatus);
           return (
@@ -532,18 +496,18 @@ export default function CollectionsPage() {
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">{collection.name}</CardTitle>
-                      {!collection.isActive && (
+                      {collection.status !== 'active' && (
                         <Badge variant="secondary">Inativa</Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {getVisibilityBadge(collection.visibility)}
-                      <div className={`flex items-center gap-1 text-xs ${getStatusColor(collection.syncStatus)}`}>
-                        <StatusIcon className={`h-3 w-3 ${collection.syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-                        {collection.syncStatus === 'synced' && 'Sincronizada'}
-                        {collection.syncStatus === 'syncing' && 'Sincronizando'}
-                        {collection.syncStatus === 'error' && 'Erro'}
-                        {collection.syncStatus === 'pending' && 'Pendente'}
+                      {getVisibilityBadge(collection.settings?.isPublic ? 'public' : 'internal')}
+                      <div className={`flex items-center gap-1 text-xs ${getStatusColor(collection.syncStatus || 'synced')}`}>
+                        <StatusIcon className={`h-3 w-3 ${(collection.syncStatus || 'synced') === 'syncing' ? 'animate-spin' : ''}`} />
+                        {(collection.syncStatus || 'synced') === 'synced' && 'Sincronizada'}
+                        {(collection.syncStatus || 'synced') === 'syncing' && 'Sincronizando'}
+                        {(collection.syncStatus || 'synced') === 'error' && 'Erro'}
+                        {(collection.syncStatus || 'synced') === 'pending' && 'Pendente'}
                       </div>
                     </div>
                   </div>
@@ -561,9 +525,13 @@ export default function CollectionsPage() {
                           Visualizar
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
+                      <DropdownMenuItem asChild>
+                        <Link href={`/dashboard/knowledge/collections/edit/${collection.id}`}>
+                          <div className="flex items-center">
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </div>
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
                         <Settings className="h-4 w-4 mr-2" />
@@ -571,7 +539,7 @@ export default function CollectionsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleToggleStatus(collection.id)}>
-                        {collection.isActive ? (
+                        {collection.status === 'active' ? (
                           <>
                             <Pause className="h-4 w-4 mr-2" />
                             Desativar
@@ -608,27 +576,27 @@ export default function CollectionsPage() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{collection.documentCount}</span>
+                      <span className="font-medium">{collection.documentCount || 0}</span>
                       <span className="text-muted-foreground">docs</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{collection.agentCount}</span>
+                      <span className="font-medium">{collection.agentCount || 0}</span>
                       <span className="text-muted-foreground">agentes</span>
                     </div>
                   </div>
 
                   {/* Tags */}
-                  {collection.tags.length > 0 && (
+                  {(collection.tags || []).length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {collection.tags.slice(0, 3).map((tag) => (
+                      {(collection.tags || []).slice(0, 3).map((tag) => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
                       ))}
-                      {collection.tags.length > 3 && (
+                      {(collection.tags || []).length > 3 && (
                         <Badge variant="outline" className="text-xs">
-                          +{collection.tags.length - 3}
+                          +{(collection.tags || []).length - 3}
                         </Badge>
                       )}
                     </div>
@@ -638,7 +606,7 @@ export default function CollectionsPage() {
                   <div className="text-xs text-muted-foreground space-y-1">
                     <div className="flex justify-between">
                       <span>Tamanho:</span>
-                      <span>{formatBytes(collection.metadata.totalSize)}</span>
+                      <span>{formatBytes(collection.totalSize || 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Atualizada:</span>
@@ -656,7 +624,8 @@ export default function CollectionsPage() {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {filteredCollections.length === 0 && (
@@ -671,10 +640,12 @@ export default function CollectionsPage() {
               }
             </p>
             {!searchTerm && selectedStatus === 'all' && selectedVisibility === 'all' && (
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeira Collection
-              </Button>
+              <Link href="/dashboard/knowledge/collections/new">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Primeira Collection
+                </Button>
+              </Link>
             )}
           </CardContent>
         </Card>

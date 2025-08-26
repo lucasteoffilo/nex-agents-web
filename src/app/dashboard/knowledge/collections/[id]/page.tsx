@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
+import collectionService, { Collection as CollectionType, Document as DocumentType } from '@/services/collection-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +60,9 @@ import {
 } from 'lucide-react';
 import { formatDate, formatRelativeTime } from '@/lib/utils';
 import Link from 'next/link';
+import { DocumentUpload } from '@/components/knowledge/document-upload';
+import { CollectionSettings } from '@/components/knowledge/collection-settings';
+import { LinkAgentDialog } from '@/components/knowledge/link-agent-dialog';
 
 interface Document {
   id: string;
@@ -317,19 +322,123 @@ export default function CollectionDetailsPage() {
   const params = useParams();
   const collectionId = params.id as string;
   
-  const [collection] = useState<CollectionDetails>(mockCollection);
+  const [collection, setCollection] = useState<CollectionDetails | null>(null);
+  const [documents, setDocuments] = useState<DocumentType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('documents');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDocumentDialogOpen, setIsAddDocumentDialogOpen] = useState(false);
   const [isLinkAgentDialogOpen, setIsLinkAgentDialogOpen] = useState(false);
 
+  // Carregar dados da collection
+  useEffect(() => {
+    const loadCollectionData = async () => {
+      try {
+        setLoading(true);
+        
+        // Carregar dados da collection
+        const collectionData = await collectionService.getCollection(collectionId);
+        
+        // Carregar documentos da collection
+        const documentsResponse = await collectionService.getDocuments(collectionId);
+        
+        // Transformar dados da API para o formato esperado pelo componente
+        const transformedCollection: CollectionDetails = {
+          id: collectionData.id,
+          name: collectionData.name,
+          description: collectionData.description || '',
+          slug: collectionData.name.toLowerCase().replace(/\s+/g, '-'),
+          documentCount: collectionData.documentCount || documentsResponse.documents?.length || 0,
+          agentCount: 0, // TODO: implementar quando tiver endpoint de agentes
+          tags: collectionData.metadata?.tags || [],
+          isActive: collectionData.status === 'active',
+          visibility: collectionData.settings?.isPublic ? 'public' : 'private',
+          createdBy: {
+            id: collectionData.userId,
+            name: 'Usuário', // TODO: buscar dados do usuário
+          },
+          updatedBy: {
+            id: collectionData.userId,
+            name: 'Usuário', // TODO: buscar dados do usuário
+          },
+          createdAt: collectionData.createdAt,
+          updatedAt: collectionData.updatedAt,
+          lastSyncAt: collectionData.updatedAt,
+          syncStatus: 'synced',
+          metadata: {
+            totalSize: collectionData.totalSize || 0,
+            avgDocumentSize: collectionData.totalSize && collectionData.documentCount 
+              ? Math.round(collectionData.totalSize / collectionData.documentCount) 
+              : 0,
+            languages: ['pt'], // TODO: implementar detecção de idiomas
+            categories: [], // TODO: implementar categorias
+          },
+          documents: [], // Será preenchido separadamente
+          agents: [], // TODO: implementar quando tiver endpoint de agentes
+        };
+        
+        setCollection(transformedCollection);
+        setDocuments(documentsResponse.documents || []);
+        
+      } catch (error) {
+        console.error('Erro ao carregar dados da collection:', error);
+        toast.error('Erro ao carregar dados da collection');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (collectionId) {
+      loadCollectionData();
+    }
+  }, [collectionId]);
+
+  // Mostrar loading enquanto carrega os dados
+  if (loading || !collection) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Carregando dados da collection...</span>
+        </div>
+      </div>
+    );
+  }
+
   const StatusIcon = getStatusIcon(collection.syncStatus);
 
-  const filteredDocuments = collection.documents.filter(doc =>
+  // Transformar documentos da API para o formato esperado
+  const transformedDocuments = documents.map(doc => ({
+    id: doc.id,
+    title: doc.originalName || doc.filename,
+    description: doc.metadata?.extractedText?.substring(0, 100) + '...' || 'Sem descrição',
+    fileName: doc.filename,
+    fileSize: doc.fileSize,
+    mimeType: doc.type === 'pdf' ? 'application/pdf' : 
+              doc.type === 'doc' || doc.type === 'docx' ? 'application/msword' :
+              doc.type === 'txt' ? 'text/plain' :
+              doc.type === 'md' ? 'text/markdown' :
+              'application/octet-stream',
+    language: doc.metadata?.language || 'pt',
+    category: 'Documento',
+    tags: [],
+    author: {
+      id: doc.userId,
+      name: 'Usuário'
+    },
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+    version: 1,
+    status: doc.status === 'completed' ? 'published' as const : 
+            doc.status === 'processing' ? 'draft' as const : 'archived' as const,
+    viewCount: 0,
+    downloadCount: 0
+  }));
+
+  const filteredDocuments = transformedDocuments.filter(doc =>
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    doc.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredAgents = collection.agents.filter(agent =>
@@ -433,7 +542,7 @@ export default function CollectionDetailsPage() {
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-4">
         <div className="flex items-center justify-between">
           <TabsList>
-            <TabsTrigger value="documents">Documentos ({collection.documents.length})</TabsTrigger>
+            <TabsTrigger value="documents">Documentos ({documents.length})</TabsTrigger>
             <TabsTrigger value="agents">Agentes ({collection.agents.length})</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Configurações</TabsTrigger>
@@ -449,10 +558,36 @@ export default function CollectionDetailsPage() {
               />
             </div>
             {selectedTab === 'documents' && (
-              <Button onClick={() => setIsAddDocumentDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Documento
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Documentos
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl">
+                  <DialogHeader>
+                    <DialogTitle>Upload de Documentos</DialogTitle>
+                    <DialogDescription>
+                      Faça upload de documentos para adicionar à coleção "{collection.name}"
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DocumentUpload 
+                    collectionId={collection.id}
+                    onUploadComplete={async () => {
+                      // Recarregar documentos após upload
+                      try {
+                        const documentsResponse = await collectionService.getDocuments(collectionId);
+                        setDocuments(documentsResponse.documents || []);
+                        toast.success('Documentos carregados com sucesso!');
+                      } catch (error) {
+                        console.error('Erro ao recarregar documentos:', error);
+                        toast.error('Erro ao recarregar documentos');
+                      }
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
             )}
             {selectedTab === 'agents' && (
               <Button onClick={() => setIsLinkAgentDialogOpen(true)}>
@@ -693,50 +828,118 @@ export default function CollectionDetailsPage() {
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações da Collection</CardTitle>
-              <CardDescription>Gerencie as configurações e permissões desta collection</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label>Nome da Collection</Label>
-                  <Input value={collection.name} readOnly />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Descrição</Label>
-                  <Textarea value={collection.description} readOnly rows={3} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Slug</Label>
-                  <Input value={collection.slug} readOnly />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Tags</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {collection.tags.map((tag) => (
-                      <Badge key={tag} variant="outline">{tag}</Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Visibilidade</Label>
-                  <div>{getVisibilityBadge(collection.visibility)}</div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Status</Label>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={collection.isActive ? 'default' : 'secondary'}>
-                      {collection.isActive ? 'Ativa' : 'Inativa'}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <CollectionSettings 
+            collection={{
+              id: collection.id,
+              name: collection.name,
+              description: collection.description,
+              slug: collection.slug,
+              tags: collection.tags,
+              visibility: collection.visibility,
+              isActive: collection.isActive,
+              settings: {
+                isPublic: collection.visibility === 'public',
+                allowDuplicates: true,
+                autoIndex: true,
+                chunkSize: 1000,
+                chunkOverlap: 200,
+                maxDocuments: 10000,
+                retentionDays: 365,
+              },
+              embeddingConfig: {
+                model: 'text-embedding-ada-002',
+                dimensions: 1536,
+                distance: 'Cosine',
+                provider: 'openai',
+              },
+            }}
+            onUpdate={async (updatedCollection) => {
+              try {
+                await collectionService.updateCollection(collection.id, {
+                  name: updatedCollection.name,
+                  description: updatedCollection.description,
+                  settings: {
+                    isPublic: updatedCollection.settings.isPublic,
+                    allowDuplicates: updatedCollection.settings.allowDuplicates,
+                    autoIndex: updatedCollection.settings.autoIndex,
+                    chunkSize: updatedCollection.settings.chunkSize,
+                    chunkOverlap: updatedCollection.settings.chunkOverlap,
+                    maxDocuments: updatedCollection.settings.maxDocuments,
+                    retentionDays: updatedCollection.settings.retentionDays,
+                  },
+                  metadata: {
+                    tags: updatedCollection.tags,
+                  },
+                });
+                
+                // Atualizar estado local
+                setCollection(prev => prev ? {
+                  ...prev,
+                  name: updatedCollection.name,
+                  description: updatedCollection.description,
+                  tags: updatedCollection.tags,
+                  visibility: updatedCollection.settings.isPublic ? 'public' : 'private',
+                } : null);
+                
+                toast.success('Collection atualizada com sucesso!');
+              } catch (error) {
+                console.error('Erro ao atualizar collection:', error);
+                toast.error('Erro ao atualizar collection');
+              }
+            }}
+            onDelete={async () => {
+              try {
+                await collectionService.deleteCollection(collection.id);
+                toast.success('Collection excluída com sucesso!');
+                // Redirecionar para a lista de collections
+                window.location.href = '/dashboard/knowledge/collections';
+              } catch (error) {
+                console.error('Erro ao excluir collection:', error);
+                toast.error('Erro ao excluir collection');
+              }
+            }}
+          />
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para vincular agentes */}
+      <LinkAgentDialog
+        open={isLinkAgentDialogOpen}
+        onOpenChange={setIsLinkAgentDialogOpen}
+        collectionId={collection.id}
+        collectionName={collection.name}
+        onAgentsLinked={(agents) => {
+          console.log('Agentes vinculados:', agents);
+          // TODO: Atualizar a lista de agentes da collection
+        }}
+      />
+
+      {/* Dialog para upload de documentos */}
+      <Dialog open={isAddDocumentDialogOpen} onOpenChange={setIsAddDocumentDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Upload de Documentos</DialogTitle>
+            <DialogDescription>
+              Faça upload de documentos para adicionar à coleção "{collection.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <DocumentUpload 
+            collectionId={collection.id}
+            onUploadComplete={async (uploadedDocuments) => {
+              // Recarregar documentos após upload
+              try {
+                const documentsResponse = await collectionService.getDocuments(collectionId);
+                setDocuments(documentsResponse.documents || []);
+                toast.success(`${uploadedDocuments.length} documento(s) enviado(s) com sucesso!`);
+                setIsAddDocumentDialogOpen(false);
+              } catch (error) {
+                console.error('Erro ao recarregar documentos:', error);
+                toast.error('Documentos enviados, mas erro ao recarregar a lista');
+              }
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -141,15 +141,15 @@ const mockDeals: Deal[] = [
 function getStatusColor(status: Contact['status']) {
   switch (status) {
     case 'lead':
-      return 'bg-blue-100 text-blue-800';
+      return 'default';
     case 'prospect':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'warning';
     case 'customer':
-      return 'bg-green-100 text-green-800';
+      return 'success';
     case 'inactive':
-      return 'bg-gray-100 text-gray-800';
+      return 'secondary';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'secondary';
   }
 }
 
@@ -411,7 +411,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Status</p>
-                  <Badge className={getStatusColor(contact.status)}>
+                  <Badge variant={getStatusColor(contact.status) as any}>
                     {getStatusLabel(contact.status)}
                   </Badge>
                 </div>

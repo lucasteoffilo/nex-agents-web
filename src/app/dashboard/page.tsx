@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -287,10 +288,12 @@ export default function DashboardPage() {
             <BarChart3 className="h-4 w-4 mr-2" />
             Relatórios
           </Button>
-          <Button>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Novo Agente
-          </Button>
+          <Link href="/dashboard/agentes/criar">
+            <Button>
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Novo Agente
+            </Button>
+          </Link>
         </div>
       </div>
 

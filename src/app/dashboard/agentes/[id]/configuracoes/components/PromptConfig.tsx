@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,10 +11,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Plus, Trash2, AlertCircle, FileText, Lightbulb } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Agent } from '@/services/agent-service';
 
 interface PromptConfigProps {
-  agentId: string;
-  onConfigChange: () => void;
+  agent: Agent;
+  initialConfig?: PromptConfiguration;
+  onConfigChange: (config: PromptConfiguration) => void;
 }
 
 interface PromptConfiguration {
@@ -47,49 +49,19 @@ interface ResponseTemplate {
   variables: string[];
 }
 
-const mockConfig: PromptConfiguration = {
-  welcomeMessage: 'Olá! Sou seu assistente de vendas. Como posso ajudá-lo hoje?',
-  systemInstructions: 'Você é um assistente de vendas especializado. Seja sempre profissional, prestativo e focado em entender as necessidades do cliente. Faça perguntas qualificadoras e ofereça soluções adequadas.',
-  fallbackMessage: 'Desculpe, não entendi completamente sua solicitação. Poderia reformular ou ser mais específico?',
-  errorMessage: 'Ocorreu um erro técnico. Por favor, tente novamente em alguns instantes.',
-  endConversationMessage: 'Foi um prazer ajudá-lo! Se precisar de mais alguma coisa, estarei aqui.',
-  escalationPrompt: 'Vou transferir você para um especialista humano que poderá ajudá-lo melhor com essa questão.',
-  contextualPrompts: [
-    {
-      id: '1',
-      name: 'Qualificação de Lead',
-      trigger: 'interesse em produto',
-      prompt: 'Identifique as necessidades específicas do cliente e qualifique o lead fazendo perguntas sobre orçamento, timeline e autoridade de decisão.',
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Objeções de Preço',
-      trigger: 'preço alto',
-      prompt: 'Foque no valor e ROI do produto. Apresente opções de pagamento e compare com concorrentes.',
-      active: true
-    }
-  ],
-  responseTemplates: [
-    {
-      id: '1',
-      name: 'Apresentação de Produto',
-      category: 'Vendas',
-      template: 'Nosso {produto} é ideal para {necessidade}. Com {beneficio_principal}, você pode {resultado_esperado}.',
-      variables: ['produto', 'necessidade', 'beneficio_principal', 'resultado_esperado']
-    },
-    {
-      id: '2',
-      name: 'Agendamento de Reunião',
-      category: 'Agendamento',
-      template: 'Vou agendar uma reunião para {data} às {horario}. Confirma sua disponibilidade?',
-      variables: ['data', 'horario']
-    }
-  ],
-  enablePersonalization: true,
-  tone: 'professional',
-  language: 'pt-BR'
-};
+const getDefaultConfig = (agent: Agent): PromptConfiguration => ({
+  welcomeMessage: agent.settings?.welcomeMessage || 'Olá! Como posso ajudá-lo hoje?',
+  systemInstructions: agent.instructions || agent.systemPrompt || 'Você é um assistente útil.',
+  fallbackMessage: agent.settings?.fallbackMessage || 'Desculpe, não entendi completamente sua solicitação. Poderia reformular?',
+  errorMessage: agent.settings?.errorMessage || 'Ocorreu um erro técnico. Por favor, tente novamente.',
+  endConversationMessage: agent.settings?.endConversationMessage || 'Foi um prazer ajudá-lo!',
+  escalationPrompt: agent.settings?.escalationPrompt || 'Vou transferir você para um especialista humano.',
+  contextualPrompts: agent.settings?.contextualPrompts || [],
+  responseTemplates: agent.settings?.responseTemplates || [],
+  enablePersonalization: agent.settings?.enablePersonalization || true,
+  tone: agent.personality?.tone || 'professional',
+  language: agent.settings?.language || 'pt-BR'
+});
 
 const tones = [
   { value: 'professional', label: 'Profissional' },
@@ -106,34 +78,42 @@ const languages = [
   { value: 'fr-FR', label: 'Français' }
 ];
 
-export default function PromptConfig({ agentId, onConfigChange }: PromptConfigProps) {
-  const [config, setConfig] = useState<PromptConfiguration>(mockConfig);
+export default function PromptConfig({ agent, initialConfig, onConfigChange }: PromptConfigProps) {
+  const [config, setConfig] = useState<PromptConfiguration>(
+    initialConfig || getDefaultConfig(agent)
+  );
+
+  useEffect(() => {
+    if (initialConfig) {
+      setConfig(initialConfig);
+    }
+  }, [initialConfig]);
 
   const handleConfigUpdate = (key: keyof PromptConfiguration, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-    onConfigChange();
+    const newConfig = { ...config, [key]: value };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const addContextualPrompt = () => {
     const newPrompt: ContextualPrompt = {
       id: Date.now().toString(),
-      name: 'Novo Prompt',
-      trigger: '',
-      prompt: '',
-      active: true
+      trigger: 'palavra-chave',
+      prompt: 'Prompt contextual aqui',
+      priority: 1
     };
-    handleConfigUpdate('contextualPrompts', [...config.contextualPrompts, newPrompt]);
+    handleConfigUpdate('contextualPrompts', [...(config.contextualPrompts || []), newPrompt]);
   };
 
   const updateContextualPrompt = (id: string, field: keyof ContextualPrompt, value: any) => {
-    const updated = config.contextualPrompts.map(prompt => 
+    const updated = (config.contextualPrompts || []).map(prompt =>
       prompt.id === id ? { ...prompt, [field]: value } : prompt
     );
     handleConfigUpdate('contextualPrompts', updated);
   };
 
   const removeContextualPrompt = (id: string) => {
-    const filtered = config.contextualPrompts.filter(prompt => prompt.id !== id);
+    const filtered = (config.contextualPrompts || []).filter(prompt => prompt.id !== id);
     handleConfigUpdate('contextualPrompts', filtered);
   };
 
@@ -141,22 +121,21 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
     const newTemplate: ResponseTemplate = {
       id: Date.now().toString(),
       name: 'Novo Template',
-      category: 'Geral',
-      template: '',
-      variables: []
+      template: 'Template de resposta aqui',
+      category: 'geral'
     };
-    handleConfigUpdate('responseTemplates', [...config.responseTemplates, newTemplate]);
+    handleConfigUpdate('responseTemplates', [...(config.responseTemplates || []), newTemplate]);
   };
 
   const updateResponseTemplate = (id: string, field: keyof ResponseTemplate, value: any) => {
-    const updated = config.responseTemplates.map(template => 
+    const updated = (config.responseTemplates || []).map(template =>
       template.id === id ? { ...template, [field]: value } : template
     );
     handleConfigUpdate('responseTemplates', updated);
   };
 
   const removeResponseTemplate = (id: string) => {
-    const filtered = config.responseTemplates.filter(template => template.id !== id);
+    const filtered = (config.responseTemplates || []).filter(template => template.id !== id);
     handleConfigUpdate('responseTemplates', filtered);
   };
 
@@ -249,7 +228,7 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
                 onValueChange={(value) => handleConfigUpdate('tone', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o tom" />
                 </SelectTrigger>
                 <SelectContent>
                   {tones.map((tone) => (
@@ -268,7 +247,7 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
                 onValueChange={(value) => handleConfigUpdate('language', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o idioma" />
                 </SelectTrigger>
                 <SelectContent>
                   {languages.map((lang) => (
@@ -311,7 +290,7 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {config.contextualPrompts.map((prompt) => (
+          {(config.contextualPrompts || []).map((prompt) => (
             <Card key={prompt.id} className="p-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -379,7 +358,7 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {config.responseTemplates.map((template) => (
+          {(config.responseTemplates || []).map((template) => (
             <Card key={template.id} className="p-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -416,7 +395,7 @@ export default function PromptConfig({ agentId, onConfigChange }: PromptConfigPr
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {template.variables.map((variable, index) => (
+                  {(template.variables || []).map((variable, index) => (
                     <Badge key={index} variant="secondary">
                       {variable}
                     </Badge>

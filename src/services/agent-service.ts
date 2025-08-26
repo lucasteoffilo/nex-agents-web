@@ -159,7 +159,7 @@ class AgentService {
 
   // Atualizar agente
   async updateAgent(agentId: string, data: UpdateAgentDto): Promise<ApiResponse<Agent>> {
-    return apiService.put(`/agents/${agentId}`, data);
+    return apiService.patch(`/agents/${agentId}`, data);
   }
 
   // Deletar agente
