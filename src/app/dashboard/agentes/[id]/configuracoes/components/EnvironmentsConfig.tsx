@@ -283,7 +283,51 @@ export default function EnvironmentsConfig({ agent, initialConfig, onConfigChang
     initialConfig || getDefaultConfig(agent)
   );
   const [copiedCode, setCopiedCode] = useState(false);
+  const [iframeCode, setIframeCode] = useState('');
   const initialConfigRef = useRef(initialConfig);
+
+  const generateEmbedCode = (config: WebChatConfig) => {
+    const { customization, behavior } = config;
+    const agentId = agent.id; // Acessa o agent.id passado como prop
+    const { primaryColor, position, size, showAvatar, showTypingIndicator, playMessageSounds } = customization || {};
+    const { autoOpen, autoOpenDelay, showWelcomeMessage, allowFileUpload, maxFileSize, allowedFileTypes } = behavior || {};
+
+    const baseUrl = window.location.origin; // Ou o URL base do seu widget, se for diferente
+
+    const iframeSrc = `${baseUrl}/chat-widget-iframe.html?` +
+        `agentId=${encodeURIComponent(agentId)}&` +
+        `baseUrl=${encodeURIComponent(baseUrl)}&` +
+        `primaryColor=${encodeURIComponent(primaryColor || '')}&` +
+        `position=${encodeURIComponent(position || '')}&` +
+        `size=${encodeURIComponent(size || '')}&` +
+        `showAvatar=${encodeURIComponent(showAvatar || false)}&` +
+        `showTypingIndicator=${encodeURIComponent(showTypingIndicator || false)}&` +
+        `playMessageSounds=${encodeURIComponent(playMessageSounds || false)}&` +
+        `autoOpen=${encodeURIComponent(autoOpen || false)}&` +
+        `autoOpenDelay=${encodeURIComponent(autoOpenDelay || 0)}&` +
+        `showWelcomeMessage=${encodeURIComponent(showWelcomeMessage || false)}&` +
+        `allowFileUpload=${encodeURIComponent(allowFileUpload || false)}&` +
+        `maxFileSize=${encodeURIComponent(maxFileSize || 0)}&` +
+        `allowedFileTypes=${encodeURIComponent(JSON.stringify(allowedFileTypes || []))}`;
+
+    const code = `
+<iframe
+  src="${iframeSrc}"
+  width="400"
+  height="600"
+  style="border:none; position:fixed; bottom:20px; right:20px; z-index:9999;"
+  title="NexAgents Chat Widget">
+</iframe>
+`;
+    setIframeCode(code);
+    return code;
+  };
+
+  useEffect(() => {
+    if (agent.id && config.webChat) {
+      generateEmbedCode(config.webChat);
+    }
+  }, [config.webChat]);
   const isInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -621,21 +665,29 @@ export default function EnvironmentsConfig({ agent, initialConfig, onConfigChang
             
             {config.webChat?.enabled && (
               <CardContent className="space-y-6">
+                {/* <div className="space-y-4">
+                  <Label className="text-base font-medium">ID do Widget</Label>
+                  <Input
+                    value={config.webChat?.widgetId || ''}
+                    onChange={(e) => handleConfigUpdate('webChat', { widgetId: e.target.value })}
+                    placeholder="Insira o ID do Widget"
+                  />
+                </div> */}
+
                 <div className="space-y-4">
                   <Label className="text-base font-medium">Código de Incorporação</Label>
                   
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <Textarea
-                        value={config.webChat?.embedCode || ''}
+                        value={iframeCode || 'Código será gerado automaticamente...'}
                         readOnly
                         className="min-h-[100px] font-mono text-sm"
-                        placeholder="Código será gerado automaticamente..."
                       />
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => copyToClipboard(config.webChat?.embedCode || '')}
+                        onClick={() => copyToClipboard(iframeCode)}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>

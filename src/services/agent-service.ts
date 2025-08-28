@@ -105,6 +105,8 @@ export interface Agent {
   lastUsedAt?: string;
 }
 
+
+
 export interface CreateAgentDto {
   name: string;
   description?: string;
@@ -132,7 +134,7 @@ export interface AgentStats {
   agentsByType: Record<string, number>;
 }
 
-class AgentService {
+export class AgentService {
   // Listar agentes com paginação e filtros
   async getAgents(params?: PaginationParams & {
     type?: string;
@@ -197,72 +199,7 @@ class AgentService {
   async toggleAgentStatus(agentId: string, isActive: boolean): Promise<ApiResponse<Agent>> {
     return apiService.patch(`/agents/${agentId}`, { isActive });
   }
-
-  // Atualizar configuração do modelo
-  async updateModelConfig(agentId: string, modelConfig: Agent['modelConfig']): Promise<ApiResponse<Agent>> {
-    return apiService.patch(`/agents/${agentId}`, { modelConfig });
-  }
-
-  // Atualizar base de conhecimento
-  async updateKnowledgeBase(agentId: string, knowledgeBase: Agent['knowledgeBase']): Promise<ApiResponse<Agent>> {
-    return apiService.patch(`/agents/${agentId}`, { knowledgeBase });
-  }
-
-  // Atualizar ferramentas
-  async updateTools(agentId: string, tools: Agent['tools']): Promise<ApiResponse<Agent>> {
-    return apiService.patch(`/agents/${agentId}`, { tools });
-  }
-
-  // Atualizar configurações
-  async updateSettings(agentId: string, settings: Agent['settings']): Promise<ApiResponse<Agent>> {
-    return apiService.patch(`/agents/${agentId}`, { settings });
-  }
-
-  // Atualizar capacidades
-  async updateCapabilities(agentId: string, capabilities: Agent['capabilities']): Promise<ApiResponse<Agent>> {
-    return apiService.patch(`/agents/${agentId}`, { capabilities });
-  }
-
-  // Treinar agente
-  async trainAgent(agentId: string): Promise<ApiResponse<{ message: string; trainingId: string }>> {
-    return apiService.post(`/agents/${agentId}/train`);
-  }
-
-  // Obter status do treinamento
-  async getTrainingStatus(agentId: string): Promise<ApiResponse<{
-    status: 'pending' | 'in_progress' | 'completed' | 'failed';
-    progress: number;
-    message?: string;
-  }>> {
-    return apiService.get(`/agents/${agentId}/training-status`);
-  }
-
-  // Publicar agente
-  async publishAgent(agentId: string): Promise<ApiResponse<Agent>> {
-    return apiService.post(`/agents/${agentId}/publish`);
-  }
-
-  // Despublicar agente
-  async unpublishAgent(agentId: string): Promise<ApiResponse<Agent>> {
-    return apiService.post(`/agents/${agentId}/unpublish`);
-  }
-
-  // Clonar agente
-  async cloneAgent(agentId: string, name: string): Promise<ApiResponse<Agent>> {
-    return apiService.post(`/agents/${agentId}/clone`, { name });
-  }
-
-  // Exportar configuração do agente
-  async exportAgent(agentId: string): Promise<ApiResponse<any>> {
-    return apiService.get(`/agents/${agentId}/export`);
-  }
-
-  // Importar configuração do agente
-  async importAgent(data: any): Promise<ApiResponse<Agent>> {
-    return apiService.post('/agents/import', data);
-  }
 }
 
-// Instância singleton
 const agentService = new AgentService();
 export default agentService;

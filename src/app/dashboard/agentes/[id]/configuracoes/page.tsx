@@ -248,15 +248,27 @@ export default function AgentConfigPage() {
       
       // Tools (opcional)
       if (configChanges.ferramentas) {
-        updateData.tools = configChanges.ferramentas;
+        // Certifique-se de que tools é um objeto com enabledTools e availableTools
+        updateData.tools = {
+          enabledTools: configChanges.ferramentas.enabledTools || [],
+          availableTools: configChanges.ferramentas.availableTools || [],
+          // Adicione outras propriedades de tools se existirem e forem necessárias
+        };
       }
       
-      // Environments/Settings (opcional)
+      // Construir o objeto settings corretamente
+      const newSettings: Partial<AgentSettings> = {
+        ...(agent.settings || {}), // Copia as configurações existentes do agente
+        ...(configChanges.settings || {}), // Sobrescreve com quaisquer mudanças gerais de settings
+      };
+
       if (configChanges.ambientes) {
-        updateData.settings = {
-          ...updateData.settings,
-          ...configChanges.ambientes
-        };
+        newSettings.environments = configChanges.ambientes;
+      }
+
+      // Atribuir newSettings a updateData.settings apenas se houver alguma alteração
+      if (Object.keys(newSettings).length > 0) {
+        updateData.settings = newSettings;
       }
       
       // Verificar se há dados para atualizar
@@ -303,7 +315,7 @@ export default function AgentConfigPage() {
         },
         conhecimento: updatedAgent.knowledgeBase || {},
         ferramentas: updatedAgent.tools || [],
-        ambientes: updatedAgent.settings || {}
+        ambientes: updatedAgent.environments || {}
       };
       
       setInitialConfigData(newInitialData);
@@ -486,10 +498,10 @@ export default function AgentConfigPage() {
         </TabsContent>
 
         <TabsContent value="ambientes" className="space-y-6">
-          <EnvironmentsConfig 
+          <EnvironmentsConfig
             agent={agent}
             initialConfig={configChanges.ambientes}
-            onConfigChange={(config) => handleConfigChange('ambientes', config)}
+            onConfigChange={(section, config) => handleConfigChange(section, config)}
           />
         </TabsContent>
       </Tabs>

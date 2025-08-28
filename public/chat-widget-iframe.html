@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget de Chat NexAgents</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        #nexagents-chat-widget-container {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="nexagents-chat-widget-container"></div>
+    <script>
+        // Recebe os parâmetros de configuração via URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const config = {
+            agentId: urlParams.get('agentId'),
+            baseUrl: urlParams.get('baseUrl'),
+            customization: {
+                primaryColor: urlParams.get('primaryColor'),
+                position: urlParams.get('position'),
+                size: urlParams.get('size'),
+                showAvatar: urlParams.get('showAvatar') === 'true',
+                showTypingIndicator: urlParams.get('showTypingIndicator') === 'true',
+                playMessageSounds: urlParams.get('playMessageSounds') === 'true'
+            },
+            behavior: {
+                autoOpen: urlParams.get('autoOpen') === 'true',
+                autoOpenDelay: parseInt(urlParams.get('autoOpenDelay') || '5000'),
+                showWelcomeMessage: urlParams.get('showWelcomeMessage') === 'true',
+                allowFileUpload: urlParams.get('allowFileUpload') === 'true',
+                maxFileSize: parseInt(urlParams.get('maxFileSize') || '10485760'),
+                allowedFileTypes: JSON.parse(urlParams.get('allowedFileTypes') || '[]')
+            }
+        };
+
+        // Configura o widget
+        window.nexagentsChatConfig = config;
+
+        // Carrega o script do widget
+        (function() {
+            var script = document.createElement('script');
+            script.src = `${config.baseUrl}/nexagents-chat-widget.js`;
+            script.async = true;
+            document.body.appendChild(script);
+        })();
+    </script>
+</body>
+</html>

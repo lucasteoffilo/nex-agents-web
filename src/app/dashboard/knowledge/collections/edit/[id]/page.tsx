@@ -9,12 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   ArrowLeft,
   Save,
   X,
   Plus,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react';
 import Link from 'next/link';
 import collectionService, { Collection } from '@/services/collection-service';
@@ -25,6 +27,14 @@ interface EditCollectionForm {
   description: string;
   isPublic: boolean;
   tags: string[];
+  embeddingConfig?: {
+    model?: string;
+    dimensions?: number;
+    distance?: 'Cosine' | 'Euclidean' | 'Dot';
+    provider?: 'openai' | 'huggingface' | 'local';
+    customParams?: Record<string, any>;
+  };
+  metadata?: Record<string, any>;
 }
 
 export default function EditCollectionPage() {
@@ -39,7 +49,9 @@ export default function EditCollectionPage() {
     name: '',
     description: '',
     isPublic: false,
-    tags: []
+    tags: [],
+    embeddingConfig: {},
+    metadata: {}
   });
   const [tagInput, setTagInput] = useState('');
 
@@ -55,7 +67,9 @@ export default function EditCollectionPage() {
         name: data.name || '',
         description: data.description || '',
         isPublic: data.settings?.isPublic || false,
-        tags: (data.metadata?.tags || data.tags) || []
+        tags: (data.metadata?.tags || data.tags) || [],
+        embeddingConfig: data.embeddingConfig || {},
+        metadata: data.metadata || {}
       });
     } catch (error) {
       console.error('Erro ao carregar coleção:', error);
@@ -85,7 +99,9 @@ export default function EditCollectionPage() {
         settings: {
           isPublic: formData.isPublic
         },
-        tags: formData.tags
+        tags: formData.tags,
+        embeddingConfig: formData.embeddingConfig,
+        metadata: formData.metadata
       });
       
       toast.success('Coleção atualizada com sucesso!');
@@ -264,6 +280,185 @@ export default function EditCollectionPage() {
                 </div>
               )}
             </div>
+
+            {/* Configurações Avançadas */}
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+                <ChevronDown className="h-4 w-4" />
+                Configurações Avançadas
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label>Configurações de Embedding</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                  <Label htmlFor="embeddingModel">Modelo</Label>
+                  <Input
+                    id="embeddingModel"
+                    value={formData.embeddingConfig?.model || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      embeddingConfig: {
+                        ...prev.embeddingConfig,
+                        model: e.target.value
+                      }
+                    }))}
+                    placeholder="Modelo de embedding"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="embeddingProvider">Provedor</Label>
+                  <Input
+                    id="embeddingProvider"
+                    value={formData.embeddingConfig?.provider || ''}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      embeddingConfig: {
+                        ...prev.embeddingConfig,
+                        provider: e.target.value
+                      }
+                    }))}
+                    placeholder="Provedor do modelo"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Opções</Label>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="allowDuplicates"
+                  checked={formData.settings?.allowDuplicates}
+                  onCheckedChange={(checked) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      settings: {
+                        ...prev.settings,
+                        allowDuplicates: checked as boolean
+                      }
+                    }))
+                  }
+                />
+                <Label htmlFor="allowDuplicates" className="text-sm font-normal">
+                  Permitir Duplicatas
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Permite documentos duplicados na collection.
+              </p>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="autoIndex"
+                  checked={formData.settings?.autoIndex}
+                  onCheckedChange={(checked) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      settings: {
+                        ...prev.settings,
+                        autoIndex: checked as boolean
+                      }
+                    }))
+                  }
+                />
+                <Label htmlFor="autoIndex" className="text-sm font-normal">
+                  Indexação Automática
+                </Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Indexa automaticamente novos documentos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="chunkSize">Tamanho do Chunk</Label>
+                <Input
+                  id="chunkSize"
+                  type="number"
+                  value={formData.settings?.chunkSize || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      chunkSize: parseInt(e.target.value)
+                    }
+                  }))}
+                  placeholder="Ex: 1000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="chunkOverlap">Sobreposição do Chunk</Label>
+                <Input
+                  id="chunkOverlap"
+                  type="number"
+                  value={formData.settings?.chunkOverlap || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      chunkOverlap: parseInt(e.target.value)
+                    }
+                  }))}
+                  placeholder="Ex: 200"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxDocuments">Máximo de Documentos</Label>
+                <Input
+                  id="maxDocuments"
+                  type="number"
+                  value={formData.settings?.maxDocuments || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      maxDocuments: parseInt(e.target.value)
+                    }
+                  }))}
+                  placeholder="Ex: 10000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="retentionDays">Dias de Retenção</Label>
+                <Input
+                  id="retentionDays"
+                  type="number"
+                  value={formData.settings?.retentionDays || ''}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: {
+                      ...prev.settings,
+                      retentionDays: parseInt(e.target.value)
+                    }
+                  }))}
+                  placeholder="Ex: 365"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="metadata">Metadados (JSON)</Label>
+              <Textarea
+                id="metadata"
+                value={JSON.stringify(formData.metadata || {}, null, 2)}
+                onChange={(e) => {
+                  try {
+                    const parsed = JSON.parse(e.target.value);
+                    setFormData(prev => ({
+                      ...prev,
+                      metadata: parsed
+                    }));
+                  } catch (error) {
+                    // Ignora erros de parsing
+                  }
+                }}
+                placeholder="{\n  "key": "value"\n}"
+                rows={4}
+              />
+            </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Botões */}
             <div className="flex gap-3 pt-4">

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chat Widget Iframe</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        iframe {
+            width: 100%;
+            height: 600px; /* Adjust height as needed */
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Testando o Widget de Chat no Iframe</h1>
+        <p>Este é um exemplo de como o widget de chat pode ser incorporado em uma página HTML usando um iframe.</p>
+        <iframe src="http://localhost:3000/chat-widget-iframe.html" title="Chat Widget"></iframe>
+        <p>Certifique-se de que o servidor de desenvolvimento esteja rodando em <code>http://localhost:3000</code> para que o iframe carregue corretamente.</p>
+    </div>
+</body>
+</html>

@@ -90,7 +90,7 @@ export default function CriarAgentePage() {
     const loadCollections = async () => {
       try {
         const collectionsData = await collectionService.getCollections();
-        setCollections(collectionsData);
+        setCollections(collectionsData.data.collections);
       } catch (error) {
         console.error('Erro ao carregar coleções:', error);
         toast.error('Erro ao carregar coleções de conhecimento');
