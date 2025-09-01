@@ -22,7 +22,7 @@ import {
   CheckCheck,
   Bot,
   User,
-  Mic,
+  Mic, // Adicionado Mic
   Image,
   File,
   AlertCircle,
@@ -32,6 +32,7 @@ import { cn, formatRelativeTime } from '@/lib/utils';
 import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
 import { useSocket } from '@/providers/socket-provider';
 import { useChats } from '@/hooks/use-chats';
+import { AudioRecorder, useAudioRecorder } from 'react-audio-voice-recorder';
 
 // Tipos importados de @/types
 
@@ -92,10 +93,51 @@ function getSenderIcon(type: string) {
 export default function ChatPage() {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false); // Novo estado para gravação
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useMultiTenantAuth();
   const { socket } = useSocket();
   
+  const { startRecording, stopRecording, recordingBlob, isRecording: isRecordingHook } = useAudioRecorder();
+
+  useEffect(() => {
+    setIsRecording(isRecordingHook);
+  }, [isRecordingHook]);
+
+  const sendAudioToBackend = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      // Substitua '/api/audio-upload' pela sua rota de upload de áudio no backend
+      const response = await fetch('/api/audio-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao enviar áudio: ${response.statusText}`);
+      }
+
+      console.log('Áudio enviado com sucesso para o backend!');
+      // Processar a resposta do backend, que agora é um arquivo de áudio
+      const audioBlobResponse = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlobResponse);
+      const audio = new Audio(audioUrl);
+      audio.play();
+      console.log('Áudio de resposta do backend reproduzido!');
+    } catch (error) {
+      console.error('Erro ao enviar áudio para o backend:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (recordingBlob) {
+      console.log('Áudio gravado:', recordingBlob);
+      sendAudioToBackend(recordingBlob);
+    }
+  }, [recordingBlob]);
+
   // Hook para gerenciar chats
   const {
     chats,
@@ -142,6 +184,14 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -401,7 +451,15 @@ export default function ChatPage() {
                 <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <Image className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                    isRecording && "text-red-500 animate-pulse"
+                  )}
+                  onClick={toggleRecording}
+                >
                   <Mic className="w-4 h-4" />
                 </Button>
                 <div className="flex-1 relative">

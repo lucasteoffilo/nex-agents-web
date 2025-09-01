@@ -196,6 +196,14 @@ class ChatService {
     return apiService.post(`/chats/${chatId}/messages`, data);
   }
 
+  async sendAudioMessage(chatId: string, audioFile: FormData): Promise<ApiResponse<Message>> {
+    return apiService.post<Message>(`/chats/${chatId}/audio-message`, audioFile, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
   // Atualizar mensagem
   async updateMessage(chatId: string, messageId: string, data: { content: string }): Promise<ApiResponse<Message>> {
     return apiService.put(`/chats/${chatId}/messages/${messageId}`, data);

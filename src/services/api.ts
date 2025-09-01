@@ -232,6 +232,11 @@ class ApiService {
     return response.data;
   }
 
+  async postRaw(url: string, data: any, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+    const response = await api.post(url, data, config);
+    return response;
+  }
+
   async patch<T = any>(
     endpoint: string,
     data?: any,
