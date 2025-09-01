@@ -208,7 +208,7 @@ export default function AnalyticsPage() {
                   <span className="text-sm text-green-600">+25.0%</span>
                 </div>
               </div>
-              <Target className="h-8 w-8 text-purple-500" />
+              <Target className="h-8 w-8 text-[#0072b9]" />
             </div>
           </CardContent>
         </Card>

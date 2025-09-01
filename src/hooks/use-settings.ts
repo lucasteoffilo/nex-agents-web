@@ -96,8 +96,58 @@ export interface TenantSettings {
   };
 }
 
+// Configurações padrão para evitar valores null
+const defaultUserSettings: UserSettings = {
+  profile: {
+    name: '',
+    email: '',
+    role: 'user'
+  },
+  appearance: {
+    theme: 'system',
+    primaryColor: '#0072b9',
+    fontSize: 'medium',
+    sidebarCollapsed: false,
+    animations: true,
+    compactMode: false
+  },
+  notifications: {
+    email: {
+      newMessages: true,
+      ticketUpdates: true,
+      systemAlerts: true,
+      weeklyReports: false
+    },
+    push: {
+      newMessages: true,
+      ticketAssignments: true,
+      mentions: true,
+      systemAlerts: false
+    },
+    sound: {
+      enabled: true,
+      volume: 50,
+      newMessage: 'notification.mp3',
+      mention: 'mention.mp3'
+    }
+  },
+  privacy: {
+    profileVisibility: 'team',
+    activityStatus: true,
+    readReceipts: true,
+    typingIndicators: true,
+    dataCollection: true
+  },
+  language: {
+    interface: 'pt-BR',
+    timezone: 'America/Sao_Paulo',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '24h'
+  }
+};
+
 export function useSettings() {
-  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings>(defaultUserSettings);
   const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -203,8 +253,6 @@ export function useSettings() {
     section: K,
     data: Partial<UserSettings[K]>
   ) => {
-    if (!userSettings) return;
-    
     const updatedSettings = {
       ...userSettings,
       [section]: {
@@ -222,58 +270,8 @@ export function useSettings() {
       setIsSaving(true);
       setError(null);
       
-      // Aqui você pode implementar um endpoint específico para reset
-      // ou usar configurações padrão
-      const defaultSettings: UserSettings = {
-        profile: {
-          name: '',
-          email: '',
-          role: 'user'
-        },
-        appearance: {
-          theme: 'system',
-          primaryColor: '#6366f1',
-          fontSize: 'medium',
-          sidebarCollapsed: false,
-          animations: true,
-          compactMode: false
-        },
-        notifications: {
-          email: {
-            newMessages: true,
-            ticketUpdates: true,
-            systemAlerts: true,
-            weeklyReports: false
-          },
-          push: {
-            newMessages: true,
-            ticketAssignments: true,
-            mentions: true,
-            systemAlerts: false
-          },
-          sound: {
-            enabled: true,
-            volume: 50,
-            newMessage: 'notification.mp3',
-            mention: 'mention.mp3'
-          }
-        },
-        privacy: {
-          profileVisibility: 'team',
-          activityStatus: true,
-          readReceipts: true,
-          typingIndicators: true,
-          dataCollection: true
-        },
-        language: {
-          interface: 'pt-BR',
-          timezone: 'America/Sao_Paulo',
-          dateFormat: 'DD/MM/YYYY',
-          timeFormat: '24h'
-        }
-      };
-      
-      return updateUserSettings(defaultSettings);
+      // Usar as configurações padrão já definidas
+      return updateUserSettings(defaultUserSettings);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao resetar configurações';
       setError(errorMessage);

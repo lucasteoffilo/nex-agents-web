@@ -51,9 +51,9 @@ import { useSettings } from '@/hooks/use-settings';
 // Cores do tema disponíveis
 
 const themeColors = [
-  { name: 'Azul', value: '#6366f1', class: 'bg-blue-500' },
+  { name: 'Azul Nex', value: '#0072b9', class: 'bg-[#0072b9]' },
   { name: 'Verde', value: '#10b981', class: 'bg-green-500' },
-  { name: 'Roxo', value: '#8b5cf6', class: 'bg-purple-500' },
+  { name: 'Azul Nex', value: '#0072b9', class: 'bg-[#0072b9]' },
   { name: 'Rosa', value: '#ec4899', class: 'bg-pink-500' },
   { name: 'Laranja', value: '#f59e0b', class: 'bg-orange-500' },
   { name: 'Vermelho', value: '#ef4444', class: 'bg-red-500' }
@@ -136,18 +136,6 @@ export default function SettingsPage() {
         <div className="flex items-center space-x-2 text-red-600">
           <AlertCircle className="h-6 w-6" />
           <span>Erro ao carregar configurações: {error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Se não há configurações carregadas
-  if (!userSettings) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex items-center space-x-2 text-muted-foreground">
-          <AlertCircle className="h-6 w-6" />
-          <span>Nenhuma configuração encontrada</span>
         </div>
       </div>
     );
@@ -350,35 +338,19 @@ export default function SettingsPage() {
               {/* Seletor de tema */}
               <div className="space-y-3">
                 <Label>Modo de Exibição</Label>
-                <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('light')}
-                    className="flex-1"
-                  >
-                    <Sun className="h-4 w-4 mr-2" />
-                    Claro
-                  </Button>
-                  <Button
-                    variant={theme === 'system' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('system')}
-                    className="flex-1"
-                  >
-                    <Monitor className="h-4 w-4 mr-2" />
-                    Sistema
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setTheme('dark')}
-                    className="flex-1"
-                  >
-                    <Moon className="h-4 w-4 mr-2" />
-                    Escuro
-                  </Button>
-                </div>
+                <Select
+                  value={userSettings.appearance.theme || 'system'}
+                  onValueChange={(value) => updateSetting('appearance', 'theme', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um tema" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Claro</SelectItem>
+                    <SelectItem value="dark">Escuro</SelectItem>
+                    <SelectItem value="system">Sistema</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Cores do tema */}
@@ -408,11 +380,11 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <Label>Tamanho da Fonte</Label>
                 <Select
-                  value={userSettings.appearance.fontSize}
+                  value={userSettings.appearance.fontSize || 'medium'}
                   onValueChange={(value) => updateSetting('appearance', 'fontSize', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione o tamanho" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="small">Pequena</SelectItem>
@@ -633,11 +605,11 @@ export default function SettingsPage() {
               <div className="space-y-3">
                 <Label>Visibilidade</Label>
                 <Select
-                  value={userSettings.privacy.profileVisibility}
+                  value={userSettings.privacy.profileVisibility || 'team'}
                   onValueChange={(value) => updateSetting('privacy', 'profileVisibility', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione a visibilidade" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="public">Público</SelectItem>
@@ -733,11 +705,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Idioma da Interface</Label>
                   <Select
-                    value={userSettings.language.interface}
+                    value={userSettings.language.interface || 'pt-BR'}
                     onValueChange={(value) => updateSetting('language', 'interface', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o idioma" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
@@ -750,11 +722,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Fuso Horário</Label>
                   <Select
-                    value={userSettings.language.timezone}
+                    value={userSettings.language.timezone || 'America/Sao_Paulo'}
                     onValueChange={(value) => updateSetting('language', 'timezone', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o fuso horário" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="America/Sao_Paulo">São Paulo (GMT-3)</SelectItem>
@@ -767,11 +739,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Formato de Data</Label>
                   <Select
-                    value={userSettings.language.dateFormat}
+                    value={userSettings.language.dateFormat || 'DD/MM/YYYY'}
                     onValueChange={(value) => updateSetting('language', 'dateFormat', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o formato" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="DD/MM/YYYY">DD/MM/AAAA</SelectItem>
@@ -784,11 +756,11 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Formato de Hora</Label>
                   <Select
-                    value={userSettings.language.timeFormat}
+                    value={userSettings.language.timeFormat || '24h'}
                     onValueChange={(value) => updateSetting('language', 'timeFormat', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o formato" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="24h">24 horas</SelectItem>

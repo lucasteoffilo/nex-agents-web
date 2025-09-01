@@ -134,11 +134,11 @@ class TenantService {
     tenant: Tenant;
     permissions: string[];
   }>> {
-    return apiService.post('/api/auth/switch-tenant', { tenantId });
+    return apiService.post('/auth/switch-tenant', { tenantId });
   }
 
   async getAvailableTenants(): Promise<ApiResponse<Tenant[]>> {
-    return apiService.get('/api/auth/available-tenants');
+    return apiService.get('/auth/available-tenants');
   }
 
   // Validações

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,10 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Zap, Settings2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Agent } from '@/services/agent-service';
 
 interface ModelConfigProps {
-  agentId: string;
-  onConfigChange: () => void;
+  agent: Agent;
+  initialConfig?: ModelConfiguration;
+  onConfigChange: (config: ModelConfiguration) => void;
 }
 
 interface ModelConfiguration {
@@ -31,41 +33,54 @@ interface ModelConfiguration {
   enableFunctionCalling: boolean;
 }
 
-const mockConfig: ModelConfiguration = {
-  provider: 'openai',
-  model: 'gpt-4-turbo',
-  temperature: 0.7,
-  maxTokens: 2048,
-  topP: 0.9,
-  frequencyPenalty: 0.0,
-  presencePenalty: 0.0,
-  systemPrompt: 'Você é um assistente de vendas especializado em qualificação de leads. Seja profissional, prestativo e focado em entender as necessidades do cliente.',
-  responseStyle: 'professional',
+const getDefaultConfig = (agent: Agent): ModelConfiguration => ({
+  provider: agent.modelConfig?.provider || 'openai',
+  model: agent.modelConfig?.model || 'gpt-3.5-turbo',
+  temperature: agent.modelConfig?.temperature || 0.7,
+  maxTokens: agent.modelConfig?.maxTokens || 1000,
+  topP: agent.modelConfig?.topP || 0.9,
+  frequencyPenalty: agent.modelConfig?.frequencyPenalty || 0.0,
+  presencePenalty: agent.modelConfig?.presencePenalty || 0.0,
+  systemPrompt: agent.systemPrompt || 'Você é um assistente útil.',
+  responseStyle: agent.personality?.style || 'conversational',
   enableStreaming: true,
   enableFunctionCalling: true
-};
+});
 
 const providers = [
   { value: 'openai', label: 'OpenAI', models: ['gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'] },
   { value: 'anthropic', label: 'Anthropic', models: ['claude-3-opus', 'claude-3-sonnet', 'claude-3-haiku'] },
   { value: 'google', label: 'Google', models: ['gemini-pro', 'gemini-pro-vision'] },
+  { value: 'deepseek', label: 'DeepSeek', models: ['deepseek-chat', 'deepseek-coder'] },
   { value: 'local', label: 'Local/Custom', models: ['llama-2-70b', 'mistral-7b'] }
 ];
 
 const responseStyles = [
-  { value: 'professional', label: 'Profissional' },
-  { value: 'casual', label: 'Casual' },
-  { value: 'friendly', label: 'Amigável' },
-  { value: 'technical', label: 'Técnico' },
-  { value: 'concise', label: 'Conciso' }
+  { value: 'conversational', label: 'Conversacional' },
+  { value: 'detailed', label: 'Detalhado' },
+  { value: 'concise', label: 'Conciso' },
+  { value: 'technical', label: 'Técnico' }
 ];
 
-export default function ModelConfig({ agentId, onConfigChange }: ModelConfigProps) {
-  const [config, setConfig] = useState<ModelConfiguration>(mockConfig);
+export default function ModelConfig({ agent, initialConfig, onConfigChange }: ModelConfigProps) {
+  const [config, setConfig] = useState<ModelConfiguration>(() => 
+    initialConfig || getDefaultConfig(agent)
+  );
+
+  useEffect(() => {
+    if (initialConfig) {
+      setConfig(initialConfig);
+    } else {
+      setConfig(getDefaultConfig(agent));
+    }
+  }, [agent, initialConfig]);
 
   const handleConfigUpdate = (key: keyof ModelConfiguration, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-    onConfigChange();
+    console.log('🔧 ModelConfig - handleConfigUpdate:', { key, value, currentConfig: config });
+    const newConfig = { ...config, [key]: value };
+    console.log('🔧 ModelConfig - newConfig:', newConfig);
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const selectedProvider = providers.find(p => p.value === config.provider);
@@ -87,7 +102,10 @@ export default function ModelConfig({ agentId, onConfigChange }: ModelConfigProp
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="provider">Provedor de IA</Label>
+              <Label htmlFor="provider">
+                Provedor de IA
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
               <Select 
                 value={config.provider} 
                 onValueChange={(value) => handleConfigUpdate('provider', value)}
@@ -106,7 +124,10 @@ export default function ModelConfig({ agentId, onConfigChange }: ModelConfigProp
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="model">Modelo</Label>
+              <Label htmlFor="model">
+                Modelo
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
               <Select 
                 value={config.model} 
                 onValueChange={(value) => handleConfigUpdate('model', value)}
@@ -128,9 +149,9 @@ export default function ModelConfig({ agentId, onConfigChange }: ModelConfigProp
           <div className="space-y-2">
             <Label htmlFor="responseStyle">Estilo de Resposta</Label>
             <Select 
-              value={config.responseStyle} 
-              onValueChange={(value) => handleConfigUpdate('responseStyle', value)}
-            >
+                value={config.responseStyle} 
+                onValueChange={(value) => handleConfigUpdate('responseStyle', value)}
+              >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o estilo" />
               </SelectTrigger>
@@ -300,7 +321,10 @@ export default function ModelConfig({ agentId, onConfigChange }: ModelConfigProp
       {/* System Prompt */}
       <Card>
         <CardHeader>
-          <CardTitle>Prompt do Sistema</CardTitle>
+          <CardTitle>
+            Prompt do Sistema
+            <span className="text-red-500 ml-1">*</span>
+          </CardTitle>
           <CardDescription>
             Instruções fundamentais que definem o comportamento do agente
           </CardDescription>

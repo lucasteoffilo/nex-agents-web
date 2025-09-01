@@ -140,7 +140,7 @@ export function VersioningStats({ className }: VersioningStatsProps) {
                 <p className="text-sm font-medium text-muted-foreground">Média por Documento</p>
                 <p className="text-2xl font-bold">{stats.averageVersionsPerDocument.toFixed(1)}</p>
               </div>
-              <BarChart3 className="h-8 w-8 text-purple-600" />
+              <BarChart3 className="h-8 w-8 text-[#0072b9]" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Versões por documento
@@ -293,7 +293,7 @@ export function VersioningStats({ className }: VersioningStatsProps) {
             </div>
             
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">
+              <div className="text-3xl font-bold text-[#0072b9] mb-2">
                 {stats.topAuthors.length}
               </div>
               <p className="text-sm text-muted-foreground">

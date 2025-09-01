@@ -338,7 +338,7 @@ export default function ChatPage() {
                       <div className={cn(
                         'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium',
                         msg.senderType === 'user' ? 'bg-brand-500' :
-                        msg.senderType === 'bot' ? 'bg-purple-500' : 'bg-green-500'
+                        msg.senderType === 'bot' ? 'bg-[#0072b9]' : 'bg-green-500'
                       )}>
                         {getSenderIcon(msg.senderType)}
                       </div>

@@ -6,7 +6,7 @@ export interface Message {
   id: string;
   chatId: string;
   content: string;
-  role: 'user' | 'assistant' | 'system';
+  type: 'user' | 'assistant' | 'system';
   timestamp: string;
   metadata?: {
     tokens?: number;
@@ -104,7 +104,7 @@ export interface UpdateChatDto {
 
 export interface SendMessageDto {
   content: string;
-  role?: 'user' | 'system';
+  type?: 'user' | 'system';
   parentMessageId?: string;
   metadata?: Message['metadata'];
 }

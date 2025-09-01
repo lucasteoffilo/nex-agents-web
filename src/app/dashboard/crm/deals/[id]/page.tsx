@@ -216,7 +216,7 @@ function getActivityColor(type: Activity['type']) {
     case 'email':
       return 'bg-green-100 text-green-600';
     case 'meeting':
-      return 'bg-purple-100 text-purple-600';
+      return 'bg-[#e6f2f9] text-[#0072b9]';
     case 'note':
       return 'bg-gray-100 text-gray-600';
     case 'proposal':

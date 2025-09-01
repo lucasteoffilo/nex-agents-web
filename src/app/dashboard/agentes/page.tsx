@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -87,7 +87,7 @@ interface Agent {
   name: string;
   description: string;
   status: 'active' | 'inactive' | 'training' | 'error';
-  type: 'chatbot' | 'voice' | 'email' | 'whatsapp';
+  type: 'assistant' | 'chatbot' | 'support' | 'sales' | 'custom';
   category: string;
   createdAt: string;
   updatedAt: string;
@@ -103,7 +103,70 @@ interface Agent {
 
 
 
-// Funções auxiliares removidas - agora usando dados da API diretamente
+// Funções auxiliares para ícones
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case 'assistant':
+      return Bot;
+    case 'chatbot':
+      return MessageSquare;
+    case 'support':
+      return Users;
+    case 'sales':
+      return Target;
+    case 'custom':
+      return Settings;
+    default:
+      return Bot;
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'active':
+      return CheckCircle;
+    case 'inactive':
+      return Pause;
+    case 'training':
+      return Loader2;
+    case 'error':
+      return AlertCircle;
+    default:
+      return Clock;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'inactive':
+      return 'secondary';
+    case 'training':
+      return 'warning';
+    case 'error':
+      return 'destructive';
+    default:
+      return 'secondary';
+  }
+};
+
+const getTypeName = (type: string) => {
+  switch (type) {
+    case 'assistant':
+      return 'Assistente';
+    case 'chatbot':
+      return 'Chatbot';
+    case 'support':
+      return 'Suporte';
+    case 'sales':
+      return 'Vendas';
+    case 'custom':
+      return 'Personalizado';
+    default:
+      return 'Desconhecido';
+  }
+};
 
 export default function AgentesPage() {
   const router = useRouter();
@@ -123,13 +186,57 @@ export default function AgentesPage() {
   } = useAgents();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
 
-  const statuses = ['all', 'active', 'inactive', 'training', 'error'];
-  const types = ['all', 'chatbot', 'voice', 'email', 'whatsapp'];
+  // Debounce para o termo de busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms de delay
 
-  const filteredAgents = agents;
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Remover o useEffect que chamava setSearch para evitar chamadas desnecessárias à API
+
+  const statuses = ['all', 'active', 'inactive', 'training', 'error'];
+  const types = ['all', 'assistant', 'chatbot', 'support', 'sales', 'custom'];
+
+  // Filtrar agentes localmente
+  const filteredAgents = agents.filter(agent => {
+    const matchesSearch = debouncedSearchTerm === '' || 
+      agent.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      agent.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+    
+    const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
+    
+    const matchesType = selectedType === 'all' || agent.type === selectedType;
+    
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  // Calcular estatísticas a partir dos dados dos agentes filtrados
+  const calculateStats = () => {
+    const total = filteredAgents.length;
+    const active = filteredAgents.filter(agent => agent.status === 'active').length;
+    const training = filteredAgents.filter(agent => agent.status === 'training').length;
+    const totalConversations = filteredAgents.reduce((sum, agent) => sum + (agent.conversations || 0), 0);
+    const avgSuccessRate = filteredAgents.length > 0 
+      ? filteredAgents.reduce((sum, agent) => sum + (agent.successRate || 0), 0) / filteredAgents.length
+      : 0;
+    
+    return {
+      total,
+      active,
+      training,
+      totalConversations,
+      avgSuccessRate
+    };
+  };
+
+  const calculatedStats = calculateStats();
 
   const handleStatusChange = async (agentId: string, newStatus: 'active' | 'inactive') => {
     try {
@@ -150,21 +257,17 @@ export default function AgentesPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setSearch(value);
+    // O setSearch será chamado pelo useEffect com debounce
   };
 
   const handleStatusFilter = (status: string) => {
     setSelectedStatus(status);
-    if (status === 'all') {
-      setActiveFilter(undefined);
-    } else {
-      setActiveFilter(status === 'active');
-    }
+    // Remover chamadas para setActiveFilter para usar filtro local
   };
 
   const handleTypeFilter = (type: string) => {
     setSelectedType(type);
-    setTypeFilter(type === 'all' ? undefined : type);
+    // Remover chamadas para setTypeFilter para usar filtro local
   };
 
   if (loading) {
@@ -198,10 +301,12 @@ export default function AgentesPage() {
           </p>
         </div>
         
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Criar Agente
-        </Button>
+        <Link href="/dashboard/agentes/criar">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Agente
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -211,7 +316,7 @@ export default function AgentesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total de Agentes</p>
-                <p className="text-2xl font-bold">{stats?.total || 0}</p>
+                <p className="text-2xl font-bold">{calculatedStats.total}</p>
               </div>
               <Bot className="h-8 w-8 text-blue-500" />
             </div>
@@ -223,7 +328,7 @@ export default function AgentesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-bold text-green-600">{stats?.active || 0}</p>
+                <p className="text-2xl font-bold text-green-600">{calculatedStats.active}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-500" />
             </div>
@@ -235,7 +340,7 @@ export default function AgentesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Treinando</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats?.training || 0}</p>
+                <p className="text-2xl font-bold text-yellow-600">{calculatedStats.training}</p>
               </div>
               <Brain className="h-8 w-8 text-yellow-500" />
             </div>
@@ -247,9 +352,9 @@ export default function AgentesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Conversas</p>
-                <p className="text-2xl font-bold">{stats?.totalConversations?.toLocaleString() || 0}</p>
+                <p className="text-2xl font-bold">{calculatedStats.totalConversations.toLocaleString()}</p>
               </div>
-              <MessageSquare className="h-8 w-8 text-purple-500" />
+              <MessageSquare className="h-8 w-8 text-[#0072b9]" />
             </div>
           </CardContent>
         </Card>
@@ -259,7 +364,7 @@ export default function AgentesPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Taxa de Sucesso</p>
-                <p className="text-2xl font-bold">{stats?.avgSuccessRate?.toFixed(1) || 0}%</p>
+                <p className="text-2xl font-bold">{calculatedStats.avgSuccessRate.toFixed(1)}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-500" />
             </div>
@@ -305,11 +410,7 @@ export default function AgentesPage() {
           >
             {types.map(type => (
               <option key={type} value={type}>
-                {type === 'all' ? 'Todos os tipos' :
-                 type === 'chatbot' ? 'Chatbot' :
-                 type === 'voice' ? 'Voz' :
-                 type === 'email' ? 'Email' :
-                 type === 'whatsapp' ? 'WhatsApp' : type}
+                {type === 'all' ? 'Todos os tipos' : getTypeName(type)}
               </option>
             ))}
           </select>
@@ -357,8 +458,11 @@ export default function AgentesPage() {
                 
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-1">
-                    <Badge variant="outline" className="text-xs">
+                    {/* <Badge variant="outline" className="text-xs">
                       {agent.category}
+                    </Badge> */}
+                    <Badge variant="secondary" className="text-xs">
+                      {getTypeName(agent.type)}
                     </Badge>
                   </div>
                   <div className="text-muted-foreground">
@@ -410,7 +514,7 @@ export default function AgentesPage() {
                   >
                     <Settings className="h-3 w-3" />
                   </Button>
-                  {agent.isActive ? (
+                  {agent.status === 'active' ? (
                     <Button 
                       size="sm" 
                       variant="outline"
@@ -454,10 +558,12 @@ export default function AgentesPage() {
               }
             </p>
             {!searchTerm && selectedStatus === 'all' && selectedType === 'all' && (
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Primeiro Agente
-              </Button>
+              <Link href="/dashboard/agentes/criar">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Primeiro Agente
+                </Button>
+              </Link>
             )}
           </CardContent>
         </Card>

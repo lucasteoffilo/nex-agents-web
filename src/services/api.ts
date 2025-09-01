@@ -64,7 +64,7 @@ function handleApiError(error: AxiosError): AppError {
 }
 
 // Configuração base da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const WORKER_BASE_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:3002';
 
 // Instância principal da API
@@ -270,11 +270,19 @@ class ApiService {
 
   // Métodos de autenticação
   async login(email: string, password: string, tenantId?: string) {
-    const response = await api.post('/api/auth/login', { 
+    const response = await api.post('/auth/login', { 
       email, 
       password, 
       tenantId 
     });
+    
+    // O backend retorna {success: true, data: {...}} devido ao ResponseTransformInterceptor
+    // Extrair os dados reais da estrutura envolvida
+    if (response.data && response.data.success && response.data.data) {
+      return response.data.data;
+    }
+    
+    // Fallback para compatibilidade (caso a estrutura mude)
     return response.data;
   }
 
@@ -284,7 +292,7 @@ class ApiService {
     password: string;
     tenantName?: string;
   }) {
-    const response = await this.post('/api/auth/register', data);
+    const response = await this.post('/auth/register', data);
     return response.data;
   }
 
@@ -294,41 +302,41 @@ class ApiService {
     password: string;
     tenantName: string;
   }) {
-    return this.post('/api/auth/register-admin', data);
+    return this.post('/auth/register-admin', data);
   }
 
   async logout() {
-    return this.post('/api/auth/logout');
+    return this.post('/auth/logout');
   }
 
   async refreshToken() {
     const refreshToken = localStorage.getItem('nex_refresh_token');
-    return this.post('/api/auth/refresh', { refreshToken });
+    return this.post('/auth/refresh', { refreshToken });
   }
 
   async forgotPassword(email: string) {
-    return this.post('/api/auth/forgot-password', { email });
+    return this.post('/auth/forgot-password', { email });
   }
 
   async resetPassword(token: string, password: string) {
-    return this.post('/api/auth/reset-password', { token, password });
+    return this.post('/auth/reset-password', { token, password });
   }
 
   async verifyEmail(token: string) {
-    return this.post('/api/auth/verify-email', { token });
+    return this.post('/auth/verify-email', { token });
   }
 
   // Métodos de usuário
   async getProfile() {
-    return this.get('/api/users/profile');
+    return this.get('/users/profile');
   }
 
   async updateProfile(data: any) {
-    return this.put('/api/users/profile', data);
+    return this.put('/users/profile', data);
   }
 
   async changePassword(currentPassword: string, newPassword: string) {
-    return this.post('/api/users/change-password', {
+    return this.post('/users/change-password', {
       currentPassword,
       newPassword,
     });
@@ -337,7 +345,8 @@ class ApiService {
   async uploadAvatar(file: File) {
     const formData = new FormData();
     formData.append('avatar', file);
-    return this.post('/api/users/avatar', formData, {
+    
+    return this.post('/users/avatar', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -425,7 +434,7 @@ class ApiService {
   }
 
   async updateAgent(agentId: string, data: any) {
-    return this.put(`/agents/${agentId}`, data);
+    return this.patch(`/agents/${agentId}`, data);
   }
 
   async deleteAgent(agentId: string) {

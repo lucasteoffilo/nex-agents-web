@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Agent } from '@/services/agent-service';
 import { 
   Wrench, 
   Plus, 
@@ -35,8 +36,9 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ToolsConfigProps {
-  agentId: string;
-  onConfigChange: () => void;
+  agent: Agent;
+  initialConfig?: ToolConfiguration;
+  onConfigChange: (config: ToolConfiguration) => void;
 }
 
 interface ToolConfiguration {
@@ -127,8 +129,8 @@ interface Webhook {
   lastTriggered?: string;
 }
 
-const mockConfig: ToolConfiguration = {
-  enabledTools: [
+const getDefaultConfig = (agent: Agent): ToolConfiguration => ({
+  enabledTools: agent.tools?.enabledTools || [
     {
       id: 'email-sender',
       name: 'Envio de Email',
@@ -158,73 +160,8 @@ const mockConfig: ToolConfiguration = {
       config: {}
     }
   ],
-  availableTools: [
-    {
-      id: 'email-sender',
-      name: 'Envio de Email',
-      description: 'Enviar emails automáticos para clientes',
-      category: 'communication',
-      icon: 'Mail',
-      requiresConfig: true
-    },
-    {
-      id: 'sms-sender',
-      name: 'Envio de SMS',
-      description: 'Enviar mensagens SMS',
-      category: 'communication',
-      icon: 'Phone',
-      requiresConfig: true
-    },
-    {
-      id: 'calendar-integration',
-      name: 'Integração com Calendário',
-      description: 'Agendar e gerenciar compromissos',
-      category: 'utility',
-      icon: 'Calendar',
-      requiresConfig: true
-    },
-    {
-      id: 'payment-processor',
-      name: 'Processador de Pagamentos',
-      description: 'Processar pagamentos e cobranças',
-      category: 'integration',
-      icon: 'CreditCard',
-      requiresConfig: true
-    },
-    {
-      id: 'document-generator',
-      name: 'Gerador de Documentos',
-      description: 'Gerar PDFs e documentos automáticos',
-      category: 'utility',
-      icon: 'FileText',
-      requiresConfig: false
-    },
-    {
-      id: 'image-analyzer',
-      name: 'Analisador de Imagens',
-      description: 'Analisar e processar imagens',
-      category: 'utility',
-      icon: 'Image',
-      requiresConfig: true
-    },
-    {
-      id: 'calculator',
-      name: 'Calculadora',
-      description: 'Realizar cálculos matemáticos',
-      category: 'utility',
-      icon: 'Calculator',
-      requiresConfig: false
-    },
-    {
-      id: 'web-scraper',
-      name: 'Web Scraper',
-      description: 'Extrair dados de websites',
-      category: 'data',
-      icon: 'Globe',
-      requiresConfig: true
-    }
-  ],
-  customFunctions: [
+  availableTools: agent.tools?.availableTools || [],
+  customFunctions: agent.tools?.customFunctions || [
     {
       id: 'custom-001',
       name: 'Calcular Desconto',
@@ -258,7 +195,7 @@ const mockConfig: ToolConfiguration = {
       enabled: true
     }
   ],
-  apiIntegrations: [
+  apiIntegrations: agent.tools?.apiIntegrations || [
     {
       id: 'api-001',
       name: 'API de Produtos',
@@ -309,7 +246,7 @@ const mockConfig: ToolConfiguration = {
       status: 'active'
     }
   ],
-  variables: [
+  variables: agent.tools?.variables || [
     {
       id: 'var-001',
       name: 'EMPRESA_NOME',
@@ -335,7 +272,7 @@ const mockConfig: ToolConfiguration = {
       scope: 'agent'
     }
   ],
-  webhooks: [
+  webhooks: agent.tools?.webhooks || [
     {
       id: 'webhook-001',
       name: 'Notificação de Vendas',
@@ -350,7 +287,7 @@ const mockConfig: ToolConfiguration = {
       lastTriggered: '2024-01-20T09:15:00Z'
     }
   ]
-};
+});
 
 const getToolIcon = (iconName: string) => {
   const icons: Record<string, any> = {
@@ -362,33 +299,70 @@ const getToolIcon = (iconName: string) => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'active': return 'text-green-600';
-    case 'error': return 'text-red-600';
-    case 'untested': return 'text-yellow-600';
-    default: return 'text-gray-600';
+    case 'active': return 'success';
+    case 'error': return 'destructive';
+    case 'untested': return 'warning';
+    default: return 'secondary';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'active': return <CheckCircle className="h-4 w-4 text-green-600" />;
-    case 'error': return <AlertCircle className="h-4 w-4 text-red-600" />;
-    case 'untested': return <Clock className="h-4 w-4 text-yellow-600" />;
-    default: return <AlertCircle className="h-4 w-4 text-gray-600" />;
+    case 'active': return <CheckCircle className="h-4 w-4" />;
+    case 'error': return <AlertCircle className="h-4 w-4" />;
+    case 'untested': return <Clock className="h-4 w-4" />;
+    default: return <AlertCircle className="h-4 w-4" />;
   }
 };
 
-export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProps) {
-  const [config, setConfig] = useState<ToolConfiguration>(mockConfig);
+export default function ToolsConfig({ agent, initialConfig, onConfigChange }: ToolsConfigProps) {
+  const [config, setConfig] = useState<ToolConfiguration>(() => {
+    if (initialConfig) {
+      const defaultConfig = getDefaultConfig(agent);
+      return {
+        ...defaultConfig,
+        ...initialConfig,
+        // Para availableTools, sempre usar o que vem da API (pode ser vazio)
+        availableTools: initialConfig.availableTools || [],
+        // Para as outras seções, usar dados mockados como exemplo se estiver vazio
+        customFunctions: initialConfig.customFunctions?.length > 0 ? initialConfig.customFunctions : defaultConfig.customFunctions,
+        apiIntegrations: initialConfig.apiIntegrations?.length > 0 ? initialConfig.apiIntegrations : defaultConfig.apiIntegrations,
+        variables: initialConfig.variables?.length > 0 ? initialConfig.variables : defaultConfig.variables,
+        webhooks: initialConfig.webhooks?.length > 0 ? initialConfig.webhooks : defaultConfig.webhooks
+      };
+    }
+    return getDefaultConfig(agent);
+  });
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
 
+  useEffect(() => {
+    if (initialConfig) {
+      const defaultConfig = getDefaultConfig(agent);
+      const mergedConfig = {
+        ...defaultConfig,
+        ...initialConfig,
+        // Para availableTools, sempre usar o que vem da API (pode ser vazio)
+        availableTools: initialConfig.availableTools || [],
+        // Para as outras seções, usar dados mockados como exemplo se estiver vazio
+        customFunctions: initialConfig.customFunctions?.length > 0 ? initialConfig.customFunctions : defaultConfig.customFunctions,
+        apiIntegrations: initialConfig.apiIntegrations?.length > 0 ? initialConfig.apiIntegrations : defaultConfig.apiIntegrations,
+        variables: initialConfig.variables?.length > 0 ? initialConfig.variables : defaultConfig.variables,
+        webhooks: initialConfig.webhooks?.length > 0 ? initialConfig.webhooks : defaultConfig.webhooks
+      };
+      setConfig(mergedConfig);
+    } else {
+      setConfig(getDefaultConfig(agent));
+    }
+  }, [agent, initialConfig]);
+
   const handleConfigUpdate = (key: keyof ToolConfiguration, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-    onConfigChange();
+    const newConfig = { ...config, [key]: value };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const toggleTool = (toolId: string) => {
-    const updated = config.enabledTools.map(tool => 
+    const updated = (config.enabledTools || []).map(tool => 
       tool.id === toolId ? { ...tool, enabled: !tool.enabled } : tool
     );
     handleConfigUpdate('enabledTools', updated);
@@ -404,7 +378,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
       returnType: 'any',
       enabled: false
     };
-    handleConfigUpdate('customFunctions', [...config.customFunctions, newFunction]);
+    handleConfigUpdate('customFunctions', [...(config.customFunctions || []), newFunction]);
   };
 
   const addApiIntegration = () => {
@@ -419,7 +393,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
       enabled: false,
       status: 'untested'
     };
-    handleConfigUpdate('apiIntegrations', [...config.apiIntegrations, newApi]);
+    handleConfigUpdate('apiIntegrations', [...(config.apiIntegrations || []), newApi]);
   };
 
   const addVariable = () => {
@@ -431,7 +405,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
       description: '',
       scope: 'agent'
     };
-    handleConfigUpdate('variables', [...config.variables, newVariable]);
+    handleConfigUpdate('variables', [...(config.variables || []), newVariable]);
   };
 
   const addWebhook = () => {
@@ -444,7 +418,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
       events: [],
       enabled: false
     };
-    handleConfigUpdate('webhooks', [...config.webhooks, newWebhook]);
+    handleConfigUpdate('webhooks', [...(config.webhooks || []), newWebhook]);
   };
 
   const toggleSecretVisibility = (id: string) => {
@@ -475,42 +449,54 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {config.availableTools.map((tool) => {
-                  const enabledTool = config.enabledTools.find(t => t.id === tool.id);
-                  const isEnabled = enabledTool?.enabled || false;
-                  
-                  return (
-                    <Card key={tool.id} className={`cursor-pointer transition-colors ${
-                      isEnabled ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
-                    }`}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            {getToolIcon(tool.icon)}
-                            <h4 className="font-medium">{tool.name}</h4>
+              {(config.availableTools || []).length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-muted-foreground mb-2">
+                    Nenhuma ferramenta disponível no momento
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    As ferramentas serão carregadas automaticamente quando disponíveis.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(config.availableTools || []).map((tool) => {
+                    const enabledTool = (config.enabledTools || []).find(t => t.id === tool.id);
+                    const isEnabled = enabledTool?.enabled || false;
+                    
+                    return (
+                      <Card key={tool.id} className={`cursor-pointer transition-colors ${
+                        isEnabled ? 'border-primary bg-primary/5' : 'hover:border-primary/50'
+                      }`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              {getToolIcon(tool.icon)}
+                              <h4 className="font-medium">{tool.name}</h4>
+                            </div>
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={() => toggleTool(tool.id)}
+                            />
                           </div>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={() => toggleTool(tool.id)}
-                          />
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {tool.description}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline">{tool.category}</Badge>
-                          {tool.requiresConfig && (
-                            <Button variant="ghost" size="sm">
-                              <Settings className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {tool.description}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline">{tool.category}</Badge>
+                            {tool.requiresConfig && (
+                              <Button variant="ghost" size="sm">
+                                <Settings className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -536,7 +522,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {config.customFunctions.map((func) => (
+              {(config.customFunctions || []).map((func) => (
                 <Card key={func.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-4">
@@ -548,7 +534,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         <Switch
                           checked={func.enabled}
                           onCheckedChange={(checked) => {
-                            const updated = config.customFunctions.map(f => 
+                            const updated = (config.customFunctions || []).map(f => 
                               f.id === func.id ? { ...f, enabled: checked } : f
                             );
                             handleConfigUpdate('customFunctions', updated);
@@ -566,7 +552,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         <Textarea
                           value={func.code}
                           onChange={(e) => {
-                            const updated = config.customFunctions.map(f => 
+                            const updated = (config.customFunctions || []).map(f => 
                               f.id === func.id ? { ...f, code: e.target.value } : f
                             );
                             handleConfigUpdate('customFunctions', updated);
@@ -579,7 +565,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                       <div>
                         <Label>Parâmetros</Label>
                         <div className="space-y-2 mt-2">
-                          {func.parameters.map((param, index) => (
+                          {(func.parameters || []).map((param, index) => (
                             <div key={index} className="flex items-center gap-2 p-2 border rounded">
                               <Badge variant="outline">{param.type}</Badge>
                               <span className="font-medium">{param.name}</span>
@@ -618,7 +604,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {config.apiIntegrations.map((api) => (
+              {(config.apiIntegrations || []).map((api) => (
                 <Card key={api.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-4">
@@ -629,6 +615,10 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         </div>
                         <div className="flex items-center gap-2">
                           {getStatusIcon(api.status)}
+                          <Badge variant={getStatusColor(api.status) as any}>
+                            {api.status === 'active' ? 'Ativo' : 
+                             api.status === 'error' ? 'Erro' : 'Não testado'}
+                          </Badge>
                           <Badge variant="outline">{api.authType}</Badge>
                         </div>
                       </div>
@@ -639,7 +629,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         <Switch
                           checked={api.enabled}
                           onCheckedChange={(checked) => {
-                            const updated = config.apiIntegrations.map(a => 
+                            const updated = (config.apiIntegrations || []).map(a => 
                               a.id === api.id ? { ...a, enabled: checked } : a
                             );
                             handleConfigUpdate('apiIntegrations', updated);
@@ -659,9 +649,9 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         </div>
                         <div>
                           <Label>Tipo de Autenticação</Label>
-                          <Select value={api.authType}>
+                          <Select value={api.authType} onValueChange={() => {}}>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Selecione a autenticação" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Nenhuma</SelectItem>
@@ -676,7 +666,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                       <div>
                         <Label>Endpoints Disponíveis</Label>
                         <div className="space-y-2 mt-2">
-                          {api.endpoints.map((endpoint) => (
+                          {(api.endpoints || []).map((endpoint) => (
                             <div key={endpoint.id} className="flex items-center justify-between p-3 border rounded">
                               <div className="flex items-center gap-3">
                                 <Badge variant={endpoint.method === 'GET' ? 'default' : 'secondary'}>
@@ -721,7 +711,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {config.variables.map((variable) => (
+              {(config.variables || []).map((variable) => (
                 <div key={variable.id} className="flex items-center gap-4 p-4 border rounded-lg">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
@@ -750,9 +740,9 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                     </div>
                     <div>
                       <Label>Tipo</Label>
-                      <Select value={variable.type}>
+                      <Select value={variable.type} onValueChange={() => {}}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="string">String</SelectItem>
@@ -764,9 +754,9 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                     </div>
                     <div>
                       <Label>Escopo</Label>
-                      <Select value={variable.scope}>
+                      <Select value={variable.scope} onValueChange={() => {}}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione o escopo" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="global">Global</SelectItem>
@@ -805,7 +795,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {config.webhooks.map((webhook) => (
+              {(config.webhooks || []).map((webhook) => (
                 <Card key={webhook.id}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-4">
@@ -822,7 +812,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                         <Switch
                           checked={webhook.enabled}
                           onCheckedChange={(checked) => {
-                            const updated = config.webhooks.map(w => 
+                            const updated = (config.webhooks || []).map(w => 
                               w.id === webhook.id ? { ...w, enabled: checked } : w
                             );
                             handleConfigUpdate('webhooks', updated);
@@ -841,9 +831,9 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                       </div>
                       <div>
                         <Label>Método HTTP</Label>
-                        <Select value={webhook.method}>
+                        <Select value={webhook.method} onValueChange={() => {}}>
                           <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue placeholder="Selecione o método" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="POST">POST</SelectItem>
@@ -856,7 +846,7 @@ export default function ToolsConfig({ agentId, onConfigChange }: ToolsConfigProp
                     <div className="mt-4">
                       <Label>Eventos</Label>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {webhook.events.map((event) => (
+                        {(webhook.events || []).map((event) => (
                           <Badge key={event} variant="secondary">
                             {event}
                           </Badge>

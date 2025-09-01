@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,15 @@ import { Slider } from '@/components/ui/slider';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Database, Plus, Trash2, Search, FileText, Link, Settings, AlertCircle } from 'lucide-react';
+import { Database, Plus, Trash2, Search, FileText, Link, Settings, AlertCircle, FolderOpen } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Agent } from '@/services/agent-service';
+import collectionService, { Collection as CollectionType } from '@/services/collection-service';
 
 interface KnowledgeConfigProps {
-  agentId: string;
-  onConfigChange: () => void;
+  agent: Agent;
+  initialConfig?: KnowledgeConfiguration;
+  onConfigChange: (config: KnowledgeConfiguration) => void;
 }
 
 interface KnowledgeConfiguration {
@@ -69,91 +72,38 @@ interface DocumentProcessingSettings {
   supportedFormats: string[];
 }
 
-const mockConfig: KnowledgeConfiguration = {
-  selectedCollections: ['collection-001', 'collection-002'],
-  availableCollections: [
-    {
-      id: 'collection-001',
-      name: 'Base de Conhecimento - Vendas',
-      description: 'Documentos relacionados a processos de vendas e produtos',
-      documentCount: 45,
-      status: 'active',
-      lastSync: '2024-01-20T10:30:00Z',
-      size: 8388608
-    },
-    {
-      id: 'collection-002',
-      name: 'FAQ - Suporte Técnico',
-      description: 'Perguntas frequentes e soluções técnicas',
-      documentCount: 128,
-      status: 'active',
-      lastSync: '2024-01-20T09:15:00Z',
-      size: 4194304
-    },
-    {
-      id: 'collection-003',
-      name: 'Manual do Produto',
-      description: 'Documentação técnica completa dos produtos',
-      documentCount: 67,
-      status: 'syncing',
-      lastSync: '2024-01-19T16:45:00Z',
-      size: 12582912
-    },
-    {
-      id: 'collection-004',
-      name: 'Políticas Internas',
-      description: 'Políticas e procedimentos da empresa',
-      documentCount: 23,
-      status: 'error',
-      lastSync: '2024-01-18T14:20:00Z',
-      size: 2097152
-    }
-  ],
+const getDefaultConfig = (agent: Agent): KnowledgeConfiguration => ({
+  selectedCollections: Array.isArray(agent.knowledgeBase?.selectedCollections) ? agent.knowledgeBase.selectedCollections : [],
+  availableCollections: Array.isArray(agent.knowledgeBase?.availableCollections) ? agent.knowledgeBase.availableCollections : [],
   searchSettings: {
-    similarityThreshold: 0.7,
-    maxResults: 5,
-    includeMetadata: true,
-    enableSemanticSearch: true,
-    contextWindow: 2000
+    similarityThreshold: agent.knowledgeBase?.searchSettings?.similarityThreshold ?? 0.7,
+    maxResults: agent.knowledgeBase?.searchSettings?.maxResults ?? 5,
+    includeMetadata: agent.knowledgeBase?.searchSettings?.includeMetadata ?? true,
+    enableSemanticSearch: agent.knowledgeBase?.searchSettings?.enableSemanticSearch ?? true,
+    contextWindow: agent.knowledgeBase?.searchSettings?.contextWindow ?? 2000
   },
-  externalSources: [
-    {
-      id: 'source-001',
-      name: 'API de Produtos',
-      type: 'api',
-      url: 'https://api.empresa.com/produtos',
-      enabled: true,
-      lastSync: '2024-01-20T08:00:00Z'
-    },
-    {
-      id: 'source-002',
-      name: 'Site Corporativo',
-      type: 'website',
-      url: 'https://www.empresa.com',
-      enabled: false
-    }
-  ],
-  enableWebSearch: false,
+  externalSources: Array.isArray(agent.knowledgeBase?.externalSources) ? agent.knowledgeBase.externalSources : [],
+  enableWebSearch: agent.knowledgeBase?.enableWebSearch ?? false,
   webSearchSettings: {
-    maxResults: 3,
-    sources: ['google', 'bing'],
-    language: 'pt',
-    safeSearch: true
+    maxResults: agent.knowledgeBase?.webSearchSettings?.maxResults ?? 3,
+    sources: Array.isArray(agent.knowledgeBase?.webSearchSettings?.sources) ? agent.knowledgeBase.webSearchSettings.sources : ['google', 'bing'],
+    language: agent.knowledgeBase?.webSearchSettings?.language ?? 'pt',
+    safeSearch: agent.knowledgeBase?.webSearchSettings?.safeSearch ?? true
   },
   documentProcessing: {
-    chunkSize: 1000,
-    chunkOverlap: 200,
-    enableOCR: true,
-    supportedFormats: ['pdf', 'docx', 'txt', 'md']
+    chunkSize: agent.knowledgeBase?.documentProcessing?.chunkSize ?? 1000,
+    chunkOverlap: agent.knowledgeBase?.documentProcessing?.chunkOverlap ?? 200,
+    enableOCR: agent.knowledgeBase?.documentProcessing?.enableOCR ?? true,
+    supportedFormats: Array.isArray(agent.knowledgeBase?.documentProcessing?.supportedFormats) ? agent.knowledgeBase.documentProcessing.supportedFormats : ['pdf', 'docx', 'txt', 'md']
   }
-};
+});
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-    case 'syncing': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-    case 'error': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+    case 'active': return 'success';
+    case 'syncing': return 'warning';
+    case 'error': return 'destructive';
+    default: return 'secondary';
   }
 };
 
@@ -173,38 +123,106 @@ const formatFileSize = (bytes: number) => {
   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
 };
 
-export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeConfigProps) {
-  const [config, setConfig] = useState<KnowledgeConfiguration>(mockConfig);
+export default function KnowledgeConfig({ agent, initialConfig, onConfigChange }: KnowledgeConfigProps) {
+  const [config, setConfig] = useState<KnowledgeConfiguration>(() => 
+    initialConfig || getDefaultConfig(agent)
+  );
+  const [availableCollections, setAvailableCollections] = useState<CollectionType[]>([]);
+  const [loadingCollections, setLoadingCollections] = useState(true);
+
+  useEffect(() => {
+    if (initialConfig) {
+      setConfig(initialConfig);
+    } else {
+      setConfig(getDefaultConfig(agent));
+    }
+  }, [agent, initialConfig]);
+
+  // Carregar coleções disponíveis
+  useEffect(() => {
+    const loadCollections = async () => {
+      try {
+        setLoadingCollections(true);
+        const response = await collectionService.getCollections();
+        if (response.success && response.data) {
+          const collections = response.data.collections || [];
+          setAvailableCollections(collections);
+          
+          // Atualizar config com as coleções disponíveis
+          setConfig(prev => ({
+            ...prev,
+            availableCollections: collections.map(col => ({
+              id: col.id,
+              name: col.name,
+              description: col.description || '',
+              documentCount: col.documentCount || 0,
+              status: col.status === 'active' ? 'active' : 'error',
+              lastSync: col.updatedAt,
+              size: col.totalSize || 0
+            }))
+          }));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar coleções:', error);
+      } finally {
+        setLoadingCollections(false);
+      }
+    };
+
+    loadCollections();
+  }, []);
 
   const handleConfigUpdate = (key: keyof KnowledgeConfiguration, value: any) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-    onConfigChange();
+    const newConfig = { ...config, [key]: value };
+    setConfig(newConfig);
+    onConfigChange(newConfig);
   };
 
   const handleCollectionToggle = (collectionId: string, checked: boolean) => {
+    const currentCollections = config.selectedCollections || [];
     const updated = checked 
-      ? [...config.selectedCollections, collectionId]
-      : config.selectedCollections.filter(id => id !== collectionId);
+      ? [...currentCollections, collectionId]
+      : currentCollections.filter(id => id !== collectionId);
     handleConfigUpdate('selectedCollections', updated);
   };
 
   const handleSearchSettingUpdate = (key: keyof SearchSettings, value: any) => {
-    const updated = { ...config.searchSettings, [key]: value };
+    const currentSettings = config.searchSettings || {
+      similarityThreshold: 0.7,
+      maxResults: 5,
+      includeMetadata: true,
+      enableSemanticSearch: true,
+      contextWindow: 2000
+    };
+    const updated = { ...currentSettings, [key]: value };
     handleConfigUpdate('searchSettings', updated);
   };
 
   const handleWebSearchSettingUpdate = (key: keyof WebSearchSettings, value: any) => {
-    const updated = { ...config.webSearchSettings, [key]: value };
+    const currentSettings = config.webSearchSettings || {
+      maxResults: 3,
+      sources: ['google', 'bing'],
+      language: 'pt',
+      safeSearch: true
+    };
+    const updated = { ...currentSettings, [key]: value };
     handleConfigUpdate('webSearchSettings', updated);
   };
 
   const handleDocumentProcessingUpdate = (key: keyof DocumentProcessingSettings, value: any) => {
-    const updated = { ...config.documentProcessing, [key]: value };
+    const currentSettings = config.documentProcessing || {
+      chunkSize: 1000,
+      chunkOverlap: 200,
+      enableOCR: true,
+      supportedFormats: ['pdf', 'docx', 'txt', 'md']
+    };
+    const updated = { ...currentSettings, [key]: value };
     handleConfigUpdate('documentProcessing', updated);
   };
 
   const toggleExternalSource = (sourceId: string) => {
-    const updated = config.externalSources.map(source => 
+    const currentSources = config.externalSources || [];
+    const updated = currentSources.map(source => 
       source.id === sourceId ? { ...source, enabled: !source.enabled } : source
     );
     handleConfigUpdate('externalSources', updated);
@@ -218,11 +236,13 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
       url: '',
       enabled: false
     };
-    handleConfigUpdate('externalSources', [...config.externalSources, newSource]);
+    const currentSources = config.externalSources || [];
+    handleConfigUpdate('externalSources', [...currentSources, newSource]);
   };
 
   const removeExternalSource = (sourceId: string) => {
-    const filtered = config.externalSources.filter(source => source.id !== sourceId);
+    const currentSources = config.externalSources || [];
+    const filtered = currentSources.filter(source => source.id !== sourceId);
     handleConfigUpdate('externalSources', filtered);
   };
 
@@ -240,33 +260,79 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {config.availableCollections.map((collection) => (
-            <div key={collection.id} className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="flex items-center gap-4">
-                <Checkbox
-                  checked={config.selectedCollections.includes(collection.id)}
-                  onCheckedChange={(checked) => handleCollectionToggle(collection.id, checked as boolean)}
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-medium">{collection.name}</h4>
-                    <Badge className={getStatusColor(collection.status)}>
-                      {getStatusText(collection.status)}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{collection.description}</p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span>{collection.documentCount} documentos</span>
-                    <span>{formatFileSize(collection.size)}</span>
-                    <span>Última sync: {new Date(collection.lastSync).toLocaleDateString()}</span>
-                  </div>
-                </div>
+          {loadingCollections ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <span>Carregando coleções...</span>
               </div>
-              <Button variant="ghost" size="sm">
-                <Settings className="h-4 w-4" />
+            </div>
+          ) : (config.availableCollections || []).length === 0 ? (
+            <div className="text-center py-8">
+              <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">Nenhuma coleção encontrada</h3>
+              <p className="text-muted-foreground mb-4">
+                Você ainda não possui coleções de conhecimento.
+              </p>
+              <Button asChild>
+                <a href="/dashboard/knowledge/collections" target="_blank">
+                  <span className="inline-flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Criar primeira coleção
+                  </span>
+                </a>
               </Button>
             </div>
-          ))}
+          ) : (
+            <>
+              {(config.availableCollections || []).map((collection) => (
+                <div key={collection.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <Checkbox
+                      checked={(config.selectedCollections || []).includes(collection.id)}
+                      onCheckedChange={(checked) => handleCollectionToggle(collection.id, checked as boolean)}
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-medium">{collection.name}</h4>
+                        <Badge variant={getStatusColor(collection.status) as any}>
+                          {getStatusText(collection.status)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{collection.description}</p>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        <span>{collection.documentCount} documentos</span>
+                        <span>{formatFileSize(collection.size)}</span>
+                        <span>Última sync: {new Date(collection.lastSync).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              
+              {/* Mostrar coleções selecionadas */}
+              {(config.selectedCollections || []).length > 0 && (
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-medium mb-2">Coleções Selecionadas ({(config.selectedCollections || []).length})</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(config.selectedCollections || [])
+                      .map((collectionId) => {
+                        const collection = (config.availableCollections || []).find(c => c.id === collectionId);
+                        return collection ? (
+                          <Badge key={collectionId} variant="secondary">
+                            {collection.name}
+                          </Badge>
+                        ) : null;
+                      })
+                      .filter(Boolean)}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -285,10 +351,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Limiar de Similaridade</Label>
-              <Badge variant="outline">{config.searchSettings.similarityThreshold}</Badge>
+              <Badge variant="outline">{config.searchSettings?.similarityThreshold ?? 0.7}</Badge>
             </div>
             <Slider
-              value={[config.searchSettings.similarityThreshold]}
+              value={[config.searchSettings?.similarityThreshold ?? 0.7]}
               onValueChange={([value]) => handleSearchSettingUpdate('similarityThreshold', value)}
               max={1}
               min={0}
@@ -303,10 +369,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Máximo de Resultados</Label>
-              <Badge variant="outline">{config.searchSettings.maxResults}</Badge>
+              <Badge variant="outline">{config.searchSettings?.maxResults ?? 5}</Badge>
             </div>
             <Slider
-              value={[config.searchSettings.maxResults]}
+              value={[config.searchSettings?.maxResults ?? 5]}
               onValueChange={([value]) => handleSearchSettingUpdate('maxResults', value)}
               max={20}
               min={1}
@@ -321,10 +387,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label>Janela de Contexto</Label>
-              <Badge variant="outline">{config.searchSettings.contextWindow} chars</Badge>
+              <Badge variant="outline">{config.searchSettings?.contextWindow ?? 2000} chars</Badge>
             </div>
             <Slider
-              value={[config.searchSettings.contextWindow]}
+              value={[config.searchSettings?.contextWindow ?? 2000]}
               onValueChange={([value]) => handleSearchSettingUpdate('contextWindow', value)}
               max={5000}
               min={500}
@@ -345,7 +411,7 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
                 </p>
               </div>
               <Switch
-                checked={config.searchSettings.enableSemanticSearch}
+                checked={config.searchSettings?.enableSemanticSearch ?? true}
                 onCheckedChange={(checked) => handleSearchSettingUpdate('enableSemanticSearch', checked)}
               />
             </div>
@@ -358,7 +424,7 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
                 </p>
               </div>
               <Switch
-                checked={config.searchSettings.includeMetadata}
+                checked={config.searchSettings?.includeMetadata ?? true}
                 onCheckedChange={(checked) => handleSearchSettingUpdate('includeMetadata', checked)}
               />
             </div>
@@ -380,13 +446,15 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
               </CardDescription>
             </div>
             <Button onClick={addExternalSource} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar
+              <span className="inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Adicionar
+              </span>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {config.externalSources.map((source) => (
+          {(config.externalSources || []).map((source) => (
             <div key={source.id} className="flex items-center justify-between p-4 border rounded-lg">
               <div className="flex items-center gap-4">
                 <Switch
@@ -446,10 +514,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Máximo de Resultados Web</Label>
-                  <Badge variant="outline">{config.webSearchSettings.maxResults}</Badge>
+                  <Badge variant="outline">{config.webSearchSettings?.maxResults ?? 3}</Badge>
                 </div>
                 <Slider
-                  value={[config.webSearchSettings.maxResults]}
+                  value={[config.webSearchSettings?.maxResults ?? 3]}
                   onValueChange={([value]) => handleWebSearchSettingUpdate('maxResults', value)}
                   max={10}
                   min={1}
@@ -462,11 +530,11 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
                 <div className="space-y-2">
                   <Label>Idioma</Label>
                   <Select 
-                    value={config.webSearchSettings.language} 
+                    value={config.webSearchSettings?.language || 'pt'} 
                     onValueChange={(value) => handleWebSearchSettingUpdate('language', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione o idioma" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pt">Português</SelectItem>
@@ -479,7 +547,7 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
                 <div className="flex items-center justify-between pt-6">
                   <Label>Busca Segura</Label>
                   <Switch
-                    checked={config.webSearchSettings.safeSearch}
+                    checked={config.webSearchSettings?.safeSearch ?? true}
                     onCheckedChange={(checked) => handleWebSearchSettingUpdate('safeSearch', checked)}
                   />
                 </div>
@@ -505,10 +573,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Tamanho do Chunk</Label>
-                <Badge variant="outline">{config.documentProcessing.chunkSize} chars</Badge>
+                <Badge variant="outline">{config.documentProcessing?.chunkSize ?? 1000} chars</Badge>
               </div>
               <Slider
-                value={[config.documentProcessing.chunkSize]}
+                value={[config.documentProcessing?.chunkSize ?? 1000]}
                 onValueChange={([value]) => handleDocumentProcessingUpdate('chunkSize', value)}
                 max={2000}
                 min={200}
@@ -523,10 +591,10 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Sobreposição</Label>
-                <Badge variant="outline">{config.documentProcessing.chunkOverlap} chars</Badge>
+                <Badge variant="outline">{config.documentProcessing?.chunkOverlap ?? 200} chars</Badge>
               </div>
               <Slider
-                value={[config.documentProcessing.chunkOverlap]}
+                value={[config.documentProcessing?.chunkOverlap ?? 200]}
                 onValueChange={([value]) => handleDocumentProcessingUpdate('chunkOverlap', value)}
                 max={500}
                 min={0}
@@ -547,7 +615,7 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
               </p>
             </div>
             <Switch
-              checked={config.documentProcessing.enableOCR}
+              checked={config.documentProcessing?.enableOCR ?? true}
               onCheckedChange={(checked) => handleDocumentProcessingUpdate('enableOCR', checked)}
             />
           </div>
@@ -555,7 +623,7 @@ export default function KnowledgeConfig({ agentId, onConfigChange }: KnowledgeCo
           <div className="space-y-2">
             <Label>Formatos Suportados</Label>
             <div className="flex flex-wrap gap-2">
-              {config.documentProcessing.supportedFormats.map((format) => (
+              {(config.documentProcessing?.supportedFormats || ['pdf', 'docx', 'txt']).map((format) => (
                 <Badge key={format} variant="secondary">
                   .{format}
                 </Badge>

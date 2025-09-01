@@ -118,7 +118,7 @@ export default function DebugAuthPage() {
               
               <button
                 onClick={testDashboard}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+                className="w-full bg-[#0072b9] hover:bg-[#005a92] text-white font-bold py-2 px-4 rounded"
               >
                 Ir para Dashboard
               </button>
