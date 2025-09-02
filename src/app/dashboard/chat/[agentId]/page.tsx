@@ -26,7 +26,8 @@ export default function AgentChatPage() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const options = { mimeType: 'audio/webm; codecs=opus' };
+      const recorder = new MediaRecorder(stream, options);
       setMediaRecorder(recorder);
       setIsRecording(true);
       setAudioChunks([]);
@@ -35,13 +36,14 @@ export default function AgentChatPage() {
         setAudioChunks((prev) => [...prev, event.data]);
       };
 
-      recorder.start();
+      recorder.start(100); // Adicionando timeslice de 100ms para flush periódico
       toast.info('Gravação iniciada', { description: 'Comece a falar.' });
     } catch (error) {
       console.error('Erro ao iniciar gravação:', error);
       toast.error('Erro', { description: 'Não foi possível acessar o microfone.' });
     }
   };
+
 
   const stopRecording = () => {
     if (mediaRecorder) {
@@ -51,13 +53,17 @@ export default function AgentChatPage() {
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        // Aqui você enviaria o audioBlob para o backend
-        console.log('Audio gravado:', audioBlob);
+        console.log('AudioBlob gerado:', audioBlob);
+        console.log('Tamanho do AudioBlob:', audioBlob.size, 'bytes');
+        console.log('Tipo do AudioBlob:', audioBlob.type);
         handleSendAudio(audioBlob);
         setAudioChunks([]);
       };
+    } else {
+      console.warn('MediaRecorder não está ativo ao tentar parar a gravação.');
     }
   };
+
 
   // Carregar dados do agente e criar/obter chat
   useEffect(() => {
@@ -73,7 +79,7 @@ export default function AgentChatPage() {
           agentId,
           title: `Chat com ${agentResponse.data.name}`
         };
-        
+
         const chatResponse = await chatService.createChat(createChatDto);
         setChat(chatResponse.data);
 
@@ -136,14 +142,20 @@ export default function AgentChatPage() {
         },
         body: formData,
       });
+
+      console.log('Resposta do backend (status):', response.status);
+      console.log('Resposta do backend (statusText):', response.statusText);
+
       if (!response.ok) {
-        throw new Error('Failed to send audio');
+        const errorBody = await response.text();
+        console.error('Corpo do erro do backend:', errorBody);
+        throw new Error(`Failed to send audio: ${response.statusText}. Details: ${errorBody}`);
       }
       const responseAudio = await response.blob();
       const audioUrl = URL.createObjectURL(responseAudio);
 
       const tempAssistantMessage: Message = {
-        id: `temp-assistant-${Date.now()}` ,
+        id: `temp-assistant-${Date.now()}`,
         chatId: chat.id,
         content: 'Resposta em áudio',
         type: 'assistant',
@@ -156,9 +168,12 @@ export default function AgentChatPage() {
       const audioElement = new Audio(audioUrl);
       audioElement.play().catch(error => console.error('Erro ao reproduzir áudio:', error));
 
+      // Adicionar delay para garantir que as mensagens estejam salvas no servidor
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
       const messagesResponse = await chatService.getChatMessages(chat.id, { page: 1, limit: 50 });
       if (messagesResponse.data && messagesResponse.data.messages) {
-        const messagesWithFixedDates = messagesResponse.data.messages.map((msg) => {
+        let messagesWithFixedDates = messagesResponse.data.messages.map((msg) => {
           const date = new Date(msg.timestamp);
           if (isNaN(date.getTime())) {
             console.warn('Invalid timestamp received from server (after audio send):', msg.timestamp);
@@ -166,7 +181,48 @@ export default function AgentChatPage() {
           }
           return msg;
         });
+
+        // Preservar audioUrl para a mensagem do usuário
+        const latestUserMessageIndex = messagesWithFixedDates.length - 2; // Assumindo que a penúltima é do usuário
+        if (messagesWithFixedDates[latestUserMessageIndex] && messagesWithFixedDates[latestUserMessageIndex].role === 'user') {
+          messagesWithFixedDates[latestUserMessageIndex].audioUrl = URL.createObjectURL(audioBlob);
+        }
+
+        // Preservar audioUrl para a mensagem do assistente (remover, pois vamos buscar do endpoint)
+        // const latestAssistantMessageIndex = messagesWithFixedDates.length - 1;
+        // if (messagesWithFixedDates[latestAssistantMessageIndex] && messagesWithFixedDates[latestAssistantMessageIndex].role === 'assistant') {
+        //   messagesWithFixedDates[latestAssistantMessageIndex].audioUrl = audioUrl;
+        // }
+
         setMessages(messagesWithFixedDates);
+
+        // Verificar e buscar áudio para a última mensagem do assistente
+        const latestMessage = messagesWithFixedDates[messagesWithFixedDates.length - 1];
+        if (latestMessage && latestMessage.role === 'assistant' && !latestMessage.audioUrl) {
+          console.log('Iniciando fetch de áudio para mensagem ID:', latestMessage.id);
+          try {
+            const token = localStorage.getItem('nex_token');
+            console.log('Token usado:', token ? 'Presente' : 'Ausente');
+            const audioResponse = await fetch(`/api/chats/${chat.id}/messages/${latestMessage.id}/audio`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            console.log('Status da resposta de áudio:', audioResponse.status);
+            if (audioResponse.ok) {
+              const audioBlob = await audioResponse.blob();
+              console.log('Áudio blob recebido, tamanho:', audioBlob.size);
+              const audioUrl = URL.createObjectURL(audioBlob);
+              setMessages(prev => prev.map(msg => msg.id === latestMessage.id ? { ...msg, audioUrl } : msg));
+              const audio = new Audio(audioUrl);
+              audio.play().catch(error => console.error('Erro ao reproduzir áudio:', error));
+            } else {
+              console.error('Resposta não OK:', audioResponse.statusText);
+            }
+          } catch (error) {
+            console.error('Erro ao buscar áudio:', error);
+          }
+        }
+
+        // Remover a lógica de fetch adicional, pois já temos o áudio (ajustar comentário)
       }
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
@@ -179,18 +235,18 @@ export default function AgentChatPage() {
 
   const handleSendMessage = async () => {
     if (!message.trim() || !chat || isSending) return;
-    
+
     setIsSending(true);
     const userMessage = message;
     setMessage('');
-    
+
     try {
       // Criar mensagem do usuário
       const sendMessageDto: SendMessageDto = {
         content: userMessage,
         type: 'user'
       };
-      
+
       // Adicionar mensagem do usuário à interface imediatamente
       const tempUserMessage: Message = {
         id: `temp-${Date.now()}`,
@@ -200,9 +256,9 @@ export default function AgentChatPage() {
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, tempUserMessage]);
-      
+
       await chatService.sendMessage(chat.id, sendMessageDto);
-      
+
       // Após o envio, recarrega as mensagens para obter a versão final
       // da mensagem do usuário e a nova mensagem do assistente.
       const messagesResponse = await chatService.getChatMessages(chat.id, { page: 1, limit: 50 });
@@ -217,6 +273,25 @@ export default function AgentChatPage() {
         });
         setMessages(messagesWithFixedDates);
 
+        // Verificar e buscar áudio para a última mensagem do assistente
+        const latestMessage = messagesWithFixedDates[messagesWithFixedDates.length - 1];
+        if (latestMessage && latestMessage.role === 'assistant' && !latestMessage.audioUrl) {
+          try {
+            const token = localStorage.getItem('nex_token');
+            const audioResponse = await fetch(`/api/chats/${chat.id}/messages/${latestMessage.id}/audio`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (audioResponse.ok) {
+              const audioBlob = await audioResponse.blob();
+              const audioUrl = URL.createObjectURL(audioBlob);
+              setMessages(prev => prev.map(msg => msg.id === latestMessage.id ? { ...msg, audioUrl } : msg));
+              const audio = new Audio(audioUrl);
+              audio.play().catch(error => console.error('Erro ao reproduzir áudio:', error));
+            }
+          } catch (error) {
+            console.error('Erro ao buscar áudio:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -249,10 +324,9 @@ export default function AgentChatPage() {
             <p className="text-sm text-muted-foreground">
               {agent?.type ? `Agente ${agent.type}` : 'Assistente Virtual'}
               {agent?.status && (
-                <span className={`ml-2 inline-block w-2 h-2 rounded-full ${
-                  agent.status === 'active' ? 'bg-green-500' : 
+                <span className={`ml-2 inline-block w-2 h-2 rounded-full ${agent.status === 'active' ? 'bg-green-500' :
                   agent.status === 'training' ? 'bg-yellow-500' : 'bg-red-500'
-                }`} />
+                  }`} />
               )}
             </p>
           </div>
@@ -295,8 +369,8 @@ export default function AgentChatPage() {
               // const isUser = message.type === 'user';
               const isUser = (message.type === 'user' || message.role === 'user');
               return (
-                <div 
-                  key={message.id} 
+                <div
+                  key={message.id}
                   className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex items-start space-x-2 max-w-[80%] ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -315,34 +389,34 @@ export default function AgentChatPage() {
                         </div>
                       )}
                     </div>
-                    <Card 
-                      className={`p-4 text-base ${
-                        isUser 
-                          ? 'bg-brand-500 text-white border-brand-500' 
-                          : 'bg-muted'
-                      }`}
+                    <Card
+                      className={`p-4 text-base ${isUser
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : 'bg-muted'
+                        }`}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      {message.audioUrl ? (
+                        <audio controls autoPlay={message.type === 'assistant' || message.role === 'assistant'} src={message.audioUrl} className="w-full"></audio>
+                      ) : (
+                        <div className="whitespace-pre-wrap">{message.content}</div>
+                      )}
                       {message.metadata?.sources && message.metadata.sources.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-opacity-20 text-xs opacity-75">
                           <p>📚 Fontes: {message.metadata.sources.join(', ')}</p>
                         </div>
                       )}
                       <div className="text-xs opacity-50 mt-1">
-                      {(() => {
-                        const date = new Date(message.timestamp);
-                        if (isNaN(date.getTime())) {
-                          return 'Data Inválida';
-                        }
-                        return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}`;
-                      })()}
-                    </div>
-                    {message.audioUrl && (
-                      <audio controls autoPlay={message.type === 'assistant'} src={message.audioUrl} className="mt-2 w-full"></audio>
-                    )}
+                        {(() => {
+                          const date = new Date(message.timestamp);
+                          if (isNaN(date.getTime())) {
+                            return 'Data Inválida';
+                          }
+                          return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}`;
+                        })()}
+                      </div>
                     </Card>
                   </div>
                 </div>
@@ -386,9 +460,9 @@ export default function AgentChatPage() {
           >
             <Mic className="h-6 w-6" />
           </Button>
-          <Button 
-            onClick={handleSendMessage} 
-            size="icon" 
+          <Button
+            onClick={handleSendMessage}
+            size="icon"
             className="h-12 w-12 rounded-full bg-brand-500 hover:bg-brand-600"
             disabled={isLoading || isSending || !chat || !message.trim() || isRecording}
           >
@@ -403,3 +477,5 @@ export default function AgentChatPage() {
     </div>
   );
 }
+
+
