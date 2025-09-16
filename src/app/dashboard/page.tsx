@@ -136,7 +136,7 @@ interface MetricCardProps {
   icon: React.ComponentType<{ className?: string }>;
   change?: number;
   trend?: 'up' | 'down';
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'primary';
 }
 
 function MetricCard({ title, value, description, icon: Icon, change, trend, color = 'blue' }: MetricCardProps) {
@@ -145,7 +145,7 @@ function MetricCard({ title, value, description, icon: Icon, change, trend, colo
     green: 'bg-green-500',
     yellow: 'bg-yellow-500',
     red: 'bg-red-500',
-    purple: 'bg-purple-500',
+    primary: 'bg-[#0072b9]',
   };
 
   return (
@@ -320,7 +320,7 @@ export default function DashboardPage() {
           value={mockMetrics.documents.processed}
           description={`${mockMetrics.documents.processing} processando`}
           icon={FileText}
-          color="purple"
+          color="primary"
         />
         <MetricCard
           title="Satisfação"
@@ -384,7 +384,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-purple-500" />
+              <Users className="h-5 w-5 text-[#0072b9]" />
               <span>Usuários Online</span>
             </CardTitle>
           </CardHeader>

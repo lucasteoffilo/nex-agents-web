@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Send, Share2, User, Bot, Loader2 } from 'lucide-react';
+import { Send, Share2, User, Bot, Loader2, Mic } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import agentService, { Agent } from '@/services/agent-service';
@@ -19,6 +19,45 @@ export default function AgentChatPage() {
   const [chat, setChat] = useState<Chat | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setAudioChunks([]);
+
+      recorder.ondataavailable = (event) => {
+        setAudioChunks((prev) => [...prev, event.data]);
+      };
+
+      recorder.start();
+      toast.info('Gravação iniciada', { description: 'Comece a falar.' });
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast.error('Erro', { description: 'Não foi possível acessar o microfone.' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      toast.info('Gravação finalizada', { description: 'Processando áudio...' });
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        // Aqui você enviaria o audioBlob para o backend
+        console.log('Audio gravado:', audioBlob);
+        handleSendAudio(audioBlob);
+        setAudioChunks([]);
+      };
+    }
+  };
 
   // Carregar dados do agente e criar/obter chat
   useEffect(() => {
@@ -70,6 +109,73 @@ export default function AgentChatPage() {
       initializeChat();
     }
   }, [agentId, toast]);
+
+  const handleSendAudio = async (audioBlob: Blob) => {
+    if (!chat || isSending) return;
+
+    setIsSending(true);
+    const tempUserMessage: Message = {
+      id: `temp-${Date.now()}`,
+      chatId: chat.id,
+      content: 'Enviando áudio...', // Placeholder
+      type: 'user',
+      timestamp: new Date().toISOString(),
+      audioUrl: URL.createObjectURL(audioBlob), // Para pré-visualização
+    };
+    setMessages((prev) => [...prev, tempUserMessage]);
+
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      const token = localStorage.getItem('nex_token');
+      const response = await fetch(`/api/chats/${chat.id}/audio-messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error('Failed to send audio');
+      }
+      const responseAudio = await response.blob();
+      const audioUrl = URL.createObjectURL(responseAudio);
+
+      const tempAssistantMessage: Message = {
+        id: `temp-assistant-${Date.now()}` ,
+        chatId: chat.id,
+        content: 'Resposta em áudio',
+        type: 'assistant',
+        timestamp: new Date().toISOString(),
+        audioUrl: audioUrl,
+      };
+      setMessages((prev) => [...prev, tempAssistantMessage]);
+
+      // Reproduzir áudio automaticamente
+      const audioElement = new Audio(audioUrl);
+      audioElement.play().catch(error => console.error('Erro ao reproduzir áudio:', error));
+
+      const messagesResponse = await chatService.getChatMessages(chat.id, { page: 1, limit: 50 });
+      if (messagesResponse.data && messagesResponse.data.messages) {
+        const messagesWithFixedDates = messagesResponse.data.messages.map((msg) => {
+          const date = new Date(msg.timestamp);
+          if (isNaN(date.getTime())) {
+            console.warn('Invalid timestamp received from server (after audio send):', msg.timestamp);
+            return { ...msg, timestamp: new Date().toISOString() };
+          }
+          return msg;
+        });
+        setMessages(messagesWithFixedDates);
+      }
+    } catch (error) {
+      console.error('Erro ao enviar áudio:', error);
+      toast.error('Erro', { description: 'Não foi possível enviar o áudio. Tente novamente.' });
+      setMessages((prev) => prev.filter((msg) => !msg.id.startsWith('temp-')));
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!message.trim() || !chat || isSending) return;
@@ -223,17 +329,20 @@ export default function AgentChatPage() {
                         </div>
                       )}
                       <div className="text-xs opacity-50 mt-1">
-                        {(() => {
-                          const date = new Date(message.timestamp);
-                          if (isNaN(date.getTime())) {
-                            return 'Data Inválida';
-                          }
-                          return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}`;
-                        })()}
-                      </div>
+                      {(() => {
+                        const date = new Date(message.timestamp);
+                        if (isNaN(date.getTime())) {
+                          return 'Data Inválida';
+                        }
+                        return `${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}`;
+                      })()}
+                    </div>
+                    {message.audioUrl && (
+                      <audio controls autoPlay={message.type === 'assistant'} src={message.audioUrl} className="mt-2 w-full"></audio>
+                    )}
                     </Card>
                   </div>
                 </div>
@@ -267,13 +376,21 @@ export default function AgentChatPage() {
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
             placeholder={isLoading ? "Carregando..." : "Escreva sua mensagem..."}
             className="flex-1 h-12 text-base"
-            disabled={isLoading || isSending || !chat}
+            disabled={isLoading || isSending || !chat || isRecording}
           />
+          <Button
+            onClick={isRecording ? stopRecording : startRecording}
+            size="icon"
+            className={`h-12 w-12 rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'}`}
+            disabled={isLoading || isSending || !chat}
+          >
+            <Mic className="h-6 w-6" />
+          </Button>
           <Button 
             onClick={handleSendMessage} 
             size="icon" 
             className="h-12 w-12 rounded-full bg-brand-500 hover:bg-brand-600"
-            disabled={isLoading || isSending || !chat || !message.trim()}
+            disabled={isLoading || isSending || !chat || !message.trim() || isRecording}
           >
             {isSending ? (
               <Loader2 className="h-5 w-5 animate-spin" />

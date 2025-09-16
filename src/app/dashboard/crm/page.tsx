@@ -393,7 +393,7 @@ export default function CRMPage() {
                   <p className="text-sm font-medium text-muted-foreground">Valor Médio</p>
                   <p className="text-2xl font-bold">{formatCurrency(dealStats.avgValue)}</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-purple-500" />
+                <TrendingUp className="h-8 w-8 text-[#0072b9]" />
               </div>
             </CardContent>
           </Card>

@@ -27,6 +27,8 @@ import {
   Sun,
   Monitor,
   ChevronDown,
+  BookMinus,
+  BookCopy,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
@@ -54,54 +56,54 @@ const sidebarItems: SidebarItem[] = [
   {
     title: 'Conhecimento',
     href: '/dashboard/knowledge',
-    icon: FileText,
+    icon: BookCopy,
     children: [
       {
-        title: 'Collections',
+        title: 'Coleção',
         href: '/dashboard/knowledge/collections',
         icon: FolderOpen,
       },
-      {
-        title: 'Documentos',
-        href: '/dashboard/knowledge/documents',
-        icon: FileText,
-      },
-      {
-        title: 'Upload',
-        href: '/dashboard/knowledge/upload',
-        icon: FileText,
-      },
+      // {
+      //   title: 'Documentos',
+      //   href: '/dashboard/knowledge/documents',
+      //   icon: FileText,
+      // },
+      // {
+      //   title: 'Upload',
+      //   href: '/dashboard/knowledge/upload',
+      //   icon: FileText,
+      // },
     ],
   },
-  {
-    title: 'Atendimento',
-    href: '/dashboard/support',
-    icon: Ticket,
-    badge: '12',
-    children: [
-      {
-        title: 'Tickets',
-        href: '/dashboard/support/tickets',
-        icon: Ticket,
-      },
-      {
-        title: 'Histórico',
-        href: '/dashboard/support/history',
-        icon: Ticket,
-      },
-    ],
-  },
+  // {
+  //   title: 'Atendimento',
+  //   href: '/dashboard/support',
+  //   icon: Ticket,
+  //   badge: '12',
+  //   children: [
+  //     {
+  //       title: 'Tickets',
+  //       href: '/dashboard/support/tickets',
+  //       icon: Ticket,
+  //     },
+  //     {
+  //       title: 'Histórico',
+  //       href: '/dashboard/support/history',
+  //       icon: Ticket,
+  //     },
+  //   ],
+  // },
   {
     title: 'Agentes IA',
     href: '/dashboard/agentes',
     icon: Bot,
-    children: [
-      {
-        title: 'Treinamento',
-        href: '/dashboard/agentes/training',
-        icon: Bot,
-      },
-    ],
+    // children: [
+    //   {
+    //     title: 'Treinamento',
+    //     href: '/dashboard/agentes/training',
+    //     icon: Bot,
+    //   },
+    // ],
   },
   {
     title: 'CRM',
@@ -232,8 +234,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   'flex-1 flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group',
                   level > 0 && 'ml-4 pl-6',
                   active
-                    ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    ? 'bg-brand-500 text-brand-foreground shadow-lg shadow-brand-500/25'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
@@ -275,7 +277,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 level > 0 && 'ml-4 pl-6',
                 active
                   ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
               )}
               onClick={() => setSidebarOpen(false)}
             >

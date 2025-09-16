@@ -105,7 +105,7 @@ const defaultUserSettings: UserSettings = {
   },
   appearance: {
     theme: 'system',
-    primaryColor: '#6366f1',
+    primaryColor: '#0072b9',
     fontSize: 'medium',
     sidebarCollapsed: false,
     animations: true,

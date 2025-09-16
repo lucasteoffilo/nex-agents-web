@@ -2,6 +2,10 @@ import * as React from "react"
 
 import { ToastAction } from "@/components/ui/toast"
 import { toast as showToast } from "@/components/ui/use-toast"
+<<<<<<< HEAD
+=======
+import { toast } from "sonner"
+>>>>>>> feature/agent_layout
 
 export function useToast() {
   const [toasts, setToasts] = React.useState<any[]>([])
@@ -23,7 +27,11 @@ export function useToast() {
         const [toast, ...rest] = toasts
         showToast(toast)
         setToasts(rest)
+<<<<<<< HEAD
       }, toast.duration || 0)
+=======
+      }, toast?.duration || 0)
+>>>>>>> feature/agent_layout
 
       return () => clearTimeout(timer)
     }

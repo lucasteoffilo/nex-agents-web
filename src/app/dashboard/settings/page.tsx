@@ -51,9 +51,9 @@ import { useSettings } from '@/hooks/use-settings';
 // Cores do tema disponíveis
 
 const themeColors = [
-  { name: 'Azul', value: '#6366f1', class: 'bg-blue-500' },
+  { name: 'Azul Nex', value: '#0072b9', class: 'bg-[#0072b9]' },
   { name: 'Verde', value: '#10b981', class: 'bg-green-500' },
-  { name: 'Roxo', value: '#8b5cf6', class: 'bg-purple-500' },
+  { name: 'Azul Nex', value: '#0072b9', class: 'bg-[#0072b9]' },
   { name: 'Rosa', value: '#ec4899', class: 'bg-pink-500' },
   { name: 'Laranja', value: '#f59e0b', class: 'bg-orange-500' },
   { name: 'Vermelho', value: '#ef4444', class: 'bg-red-500' }

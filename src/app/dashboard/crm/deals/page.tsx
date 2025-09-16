@@ -270,7 +270,7 @@ export default function DealsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
                 <p className="text-2xl font-bold">{formatCurrency(stats.avgDealSize)}</p>
               </div>
-              <DollarSign className="h-8 w-8 text-purple-600" />
+              <DollarSign className="h-8 w-8 text-[#0072b9]" />
             </div>
           </CardContent>
         </Card>

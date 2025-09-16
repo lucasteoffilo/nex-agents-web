@@ -257,7 +257,7 @@ export default function ContactsPage() {
                 <p className="text-sm font-medium text-muted-foreground">Score Médio</p>
                 <p className="text-2xl font-bold">{stats.avgScore}</p>
               </div>
-              <Star className="h-8 w-8 text-purple-600" />
+              <Star className="h-8 w-8 text-[#0072b9]" />
             </div>
           </CardContent>
         </Card>

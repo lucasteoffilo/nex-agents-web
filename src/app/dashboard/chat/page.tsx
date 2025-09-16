@@ -22,7 +22,7 @@ import {
   CheckCheck,
   Bot,
   User,
-  Mic,
+  Mic, // Adicionado Mic
   Image,
   File,
   AlertCircle,
@@ -32,6 +32,7 @@ import { cn, formatRelativeTime } from '@/lib/utils';
 import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
 import { useSocket } from '@/providers/socket-provider';
 import { useChats } from '@/hooks/use-chats';
+import { toast } from 'sonner';
 
 // Tipos importados de @/types
 
@@ -92,10 +93,96 @@ function getSenderIcon(type: string) {
 export default function ChatPage() {
   const [message, setMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useMultiTenantAuth();
   const { socket } = useSocket();
-  
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = { mimeType: 'audio/webm; codecs=opus' };
+      const recorder = new MediaRecorder(stream, options);
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setAudioChunks([]);
+
+      recorder.ondataavailable = (event) => {
+        setAudioChunks((prev) => [...prev, event.data]);
+      };
+
+      recorder.start(100); // Adicionando timeslice de 100ms para flush periódico
+      toast.info('Gravação iniciada', { description: 'Comece a falar.' });
+    } catch (error) {
+      console.error('Erro ao iniciar gravação:', error);
+      toast.error('Erro', { description: 'Não foi possível acessar o microfone.' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      toast.info('Gravação finalizada', { description: 'Processando áudio...' });
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        console.log('AudioBlob gerado:', audioBlob);
+        console.log('Tamanho do AudioBlob:', audioBlob.size, 'bytes');
+        console.log('Tipo do AudioBlob:', audioBlob.type);
+        sendAudioToBackend(audioBlob);
+        setAudioChunks([]);
+      };
+    } else {
+      console.warn('MediaRecorder não está ativo ao tentar parar a gravação.');
+    }
+    }
+  };
+
+  const sendAudioToBackend = async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'audio.webm');
+
+      // Substitua '/api/audio-upload' pela sua rota de upload de áudio no backend
+      const response = await fetch('/api/audio-upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('Resposta do backend (status):', response.status);
+      console.log('Resposta do backend (statusText):', response.statusText);
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error('Corpo do erro do backend:', errorBody);
+        throw new Error(`Erro ao enviar áudio: ${response.statusText}. Detalhes: ${errorBody}`);
+      }
+
+      console.log('Áudio enviado com sucesso para o backend!');
+      // Processar a resposta do backend, que agora é um arquivo de áudio
+      const audioBlobResponse = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlobResponse);
+      const audio = new Audio(audioUrl);
+      audio.play();
+      console.log('Áudio de resposta do backend reproduzido!');
+    } catch (error) {
+      console.error('Erro ao enviar áudio para o backend:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Limpar chunks de áudio quando a gravação é interrompida ou o componente é desmontado
+    return () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        console.log('Parando MediaRecorder na desmontagem do componente.');
+        mediaRecorder.stop();
+      }
+    };
+  }, [mediaRecorder]);
+
   // Hook para gerenciar chats
   const {
     chats,
@@ -142,6 +229,14 @@ export default function ChatPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -338,7 +433,7 @@ export default function ChatPage() {
                       <div className={cn(
                         'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium',
                         msg.senderType === 'user' ? 'bg-brand-500' :
-                        msg.senderType === 'bot' ? 'bg-purple-500' : 'bg-green-500'
+                        msg.senderType === 'bot' ? 'bg-[#0072b9]' : 'bg-green-500'
                       )}>
                         {getSenderIcon(msg.senderType)}
                       </div>
@@ -401,7 +496,15 @@ export default function ChatPage() {
                 <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                   <Image className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200",
+                    isRecording && "text-red-500 animate-pulse"
+                  )}
+                  onClick={toggleRecording}
+                >
                   <Mic className="w-4 h-4" />
                 </Button>
                 <div className="flex-1 relative">

@@ -6,6 +6,7 @@ import { AuthContext, User, Tenant, Permission, UserRole } from '@/types';
 import apiService from '@/services/api';
 import tenantService from '@/services/tenant-service';
 import permissionService from '@/services/permission-service';
+import { redirectToDashboard } from '@/utils/navigation';
 
 interface MultiTenantAuthContextType extends AuthContext {
   // Estados de loading
@@ -95,7 +96,15 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
         
         // Atualizar estados
         setTenant(response.data.tenant);
-        setPermissions(response.data.permissions);
+        // Converter permissões se necessário
+        const permissions = Array.isArray(response.data.permissions) 
+          ? response.data.permissions.map((perm: any) => 
+              typeof perm === 'string' 
+                ? { id: perm, slug: perm, name: perm, resource: '*', action: '*', scope: 'all' as const }
+                : perm
+            )
+          : [];
+        setPermissions(permissions);
         
         // Atualizar caminho do tenant
         const pathResponse = await tenantService.getTenantPath(tenantId);
@@ -139,32 +148,92 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
         localStorage.setItem('nex_refresh_token', response.refreshToken);
       }
       
-      // Salvar token nos cookies para o middleware
-      document.cookie = `nex_token=${response.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; ${process.env.NODE_ENV === 'production' ? 'secure; ' : ''}samesite=lax`;
-      console.log('Token salvo nos cookies:', response.accessToken.substring(0, 20) + '...');
-      
       // Definir dados do usuário diretamente da resposta
+      console.log('Definindo estado do usuário...');
       setUser(response.user);
       if (response.tenant) {
         setTenant(response.tenant);
         // Salvar tenant ID no localStorage para uso nos headers das requisições
         localStorage.setItem('current_tenant_id', response.tenant.id);
-        // Salvar tenant ID nos cookies para o middleware
-        document.cookie = `current_tenant=${response.tenant.id}; path=/; max-age=${7 * 24 * 60 * 60}; ${process.env.NODE_ENV === 'production' ? 'secure; ' : ''}samesite=lax`;
       }
       if (response.permissions) {
-        setPermissions(response.permissions);
+        // Se as permissões vêm como array de strings (slugs), converter para objetos Permission
+        const permissions = Array.isArray(response.permissions) 
+          ? response.permissions.map((perm: any) => 
+              typeof perm === 'string' 
+                ? { id: perm, slug: perm, name: perm, resource: '*', action: '*', scope: 'all' as const }
+                : perm
+            )
+          : [];
+        setPermissions(permissions);
       }
       if (response.availableTenants) {
         setAvailableTenants(response.availableTenants);
       }
       
+      // Forçar atualização do estado
+      console.log('Estado definido, aguardando atualização...');
+      
+      // Salvar token nos cookies para o middleware com configuração mais robusta
+      const cookieOptions = [
+        `nex_token=${response.accessToken}`,
+        'path=/',
+        `max-age=${7 * 24 * 60 * 60}`,
+        'samesite=lax',
+        process.env.NODE_ENV === 'production' ? 'secure' : ''
+      ].filter(Boolean).join('; ');
+      
+      document.cookie = cookieOptions;
+      console.log('Token salvo nos cookies:', response.accessToken.substring(0, 20) + '...');
+      
+      // Salvar tenant ID nos cookies se disponível
+      if (response.tenant) {
+        const tenantCookieOptions = [
+          `current_tenant=${response.tenant.id}`,
+          'path=/',
+          `max-age=${7 * 24 * 60 * 60}`,
+          'samesite=lax',
+          process.env.NODE_ENV === 'production' ? 'secure' : ''
+        ].filter(Boolean).join('; ');
+        
+        document.cookie = tenantCookieOptions;
+      }
+      
       console.log('Login bem-sucedido, redirecionando para dashboard...');
-      // Usar window.location.href para forçar reload completo e permitir que o middleware detecte o cookie
+      console.log('Dados do usuário:', response.user);
+      console.log('Dados do tenant:', response.tenant);
+      console.log('Permissões:', response.permissions);
+      
+      // Verificar se estamos em uma página de debug
+      const isDebugPage = window.location.pathname.includes('login-debug') || window.location.pathname.includes('debug-auth');
+      
+      if (isDebugPage) {
+        console.log('🔍 MODO DEBUG: Redirecionamento automático desabilitado');
+        console.log('=== DADOS DO LOGIN ===');
+        console.log('URL atual:', window.location.href);
+        console.log('Cookies atuais:', document.cookie);
+        console.log('LocalStorage:', {
+          nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
+          current_tenant_id: localStorage.getItem('current_tenant_id')
+        });
+        console.log('=== FIM DOS DADOS ===');
+        return; // Não redirecionar em modo debug
+      }
+      
+      // Aguardar mais tempo para debug e garantir que os cookies sejam definidos
       setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 100);
-      console.log('Redirecionamento agendado');
+        console.log('=== INICIANDO REDIRECIONAMENTO ===');
+        console.log('URL atual:', window.location.href);
+        console.log('Cookies atuais:', document.cookie);
+        console.log('LocalStorage:', {
+          nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
+          current_tenant_id: localStorage.getItem('current_tenant_id')
+        });
+        
+        // Usar função de redirecionamento segura
+        console.log('Redirecionando para /dashboard...');
+        redirectToDashboard(router);
+      }, 1000); // Aumentei para 1 segundo para dar tempo de ver os logs
     } catch (err: any) {
       console.error('Erro detalhado no login:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Erro ao fazer login';

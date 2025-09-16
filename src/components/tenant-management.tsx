@@ -357,7 +357,7 @@ export function TenantManagement({ className }: TenantManagementProps) {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Shield className="h-4 w-4 text-purple-500" />
+                    <Shield className="h-4 w-4 text-[#0072b9]" />
                     <div>
                       <p className="text-sm font-medium">Sub-clientes</p>
                       <p className="text-2xl font-bold">

@@ -358,7 +358,7 @@ export default function KnowledgePage() {
                   {isLoading ? '-' : formatBytes(stats.totalSize)}
                 </p>
               </div>
-              <Upload className="h-8 w-8 text-purple-500" />
+              <Upload className="h-8 w-8 text-[#0072b9]" />
             </div>
           </CardContent>
         </Card>

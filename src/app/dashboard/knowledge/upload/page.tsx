@@ -60,7 +60,7 @@ interface UploadSettings {
 const categories = [
   { id: '1', name: 'Documentação Técnica', color: 'blue' },
   { id: '2', name: 'Atendimento', color: 'green' },
-  { id: '3', name: 'Vendas', color: 'purple' },
+  { id: '3', name: 'Vendas', color: '#0072b9' },
   { id: '4', name: 'Jurídico', color: 'red' },
   { id: '5', name: 'RH', color: 'orange' },
   { id: '6', name: 'Marketing', color: 'pink' }

@@ -64,7 +64,7 @@ function handleApiError(error: AxiosError): AppError {
 }
 
 // Configuração base da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const WORKER_BASE_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:3002';
 
 // Instância principal da API
@@ -230,6 +230,11 @@ class ApiService {
   ): Promise<ApiResponse<T>> {
     const response = await api.put(endpoint, data, config);
     return response.data;
+  }
+
+  async postRaw(url: string, data: any, config?: AxiosRequestConfig): Promise<AxiosResponse> {
+    const response = await api.post(url, data, config);
+    return response;
   }
 
   async patch<T = any>(

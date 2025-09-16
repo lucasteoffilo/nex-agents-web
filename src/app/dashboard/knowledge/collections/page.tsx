@@ -52,149 +52,7 @@ import collectionService, { Collection } from '@/services/collection-service';
 import { toast } from 'sonner';
 
 // Usando a interface Collection do serviço
-type KnowledgeBaseCollection = Collection & {
-  slug?: string;
-  agentCount?: number;
-  lastSyncAt?: string;
-  syncStatus?: 'synced' | 'syncing' | 'error' | 'pending';
-  createdBy?: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-  updatedBy?: {
-    id: string;
-    name: string;
-    avatar?: string;
-  };
-};
 
-const mockCollections: KnowledgeBaseCollection[] = [
-  {
-    id: 'collection-001',
-    name: 'Catálogo de Produtos',
-    description: 'Informações completas sobre todos os produtos da empresa, incluindo especificações técnicas, preços e disponibilidade.',
-    slug: 'catalogo-produtos',
-    documentCount: 45,
-    agentCount: 3,
-    tags: ['produtos', 'vendas', 'especificações'],
-    isActive: true,
-    visibility: 'internal',
-    createdBy: {
-      id: '1',
-      name: 'Ana Silva',
-      avatar: '/avatars/ana.jpg'
-    },
-    updatedBy: {
-      id: '2',
-      name: 'Carlos Santos',
-      avatar: '/avatars/carlos.jpg'
-    },
-    createdAt: '2024-01-10T09:00:00Z',
-    updatedAt: '2024-01-20T14:30:00Z',
-    lastSyncAt: '2024-01-20T14:30:00Z',
-    syncStatus: 'synced',
-    metadata: {
-      totalSize: 15728640, // 15MB
-      avgDocumentSize: 349525, // ~340KB
-      languages: ['pt', 'en'],
-      categories: ['Produtos', 'Especificações', 'Preços']
-    }
-  },
-  {
-    id: 'collection-002',
-    name: 'FAQ Vendas',
-    description: 'Perguntas frequentes relacionadas ao processo de vendas, políticas comerciais e condições de pagamento.',
-    slug: 'faq-vendas',
-    documentCount: 28,
-    agentCount: 2,
-    tags: ['faq', 'vendas', 'comercial'],
-    isActive: true,
-    visibility: 'public',
-    createdBy: {
-      id: '3',
-      name: 'Maria Santos',
-      avatar: '/avatars/maria.jpg'
-    },
-    updatedBy: {
-      id: '3',
-      name: 'Maria Santos',
-      avatar: '/avatars/maria.jpg'
-    },
-    createdAt: '2024-01-08T11:30:00Z',
-    updatedAt: '2024-01-18T16:45:00Z',
-    lastSyncAt: '2024-01-18T16:45:00Z',
-    syncStatus: 'synced',
-    metadata: {
-      totalSize: 8388608, // 8MB
-      avgDocumentSize: 299593, // ~293KB
-      languages: ['pt'],
-      categories: ['FAQ', 'Vendas', 'Comercial']
-    }
-  },
-  {
-    id: 'collection-003',
-    name: 'Manual Técnico',
-    description: 'Documentação técnica completa para instalação, configuração e manutenção dos sistemas.',
-    slug: 'manual-tecnico',
-    documentCount: 67,
-    agentCount: 1,
-    tags: ['técnico', 'instalação', 'configuração'],
-    isActive: true,
-    visibility: 'internal',
-    createdBy: {
-      id: '4',
-      name: 'Pedro Lima',
-      avatar: '/avatars/pedro.jpg'
-    },
-    updatedBy: {
-      id: '4',
-      name: 'Pedro Lima',
-      avatar: '/avatars/pedro.jpg'
-    },
-    createdAt: '2024-01-05T14:20:00Z',
-    updatedAt: '2024-01-19T10:15:00Z',
-    lastSyncAt: '2024-01-19T09:30:00Z',
-    syncStatus: 'syncing',
-    metadata: {
-      totalSize: 25165824, // 24MB
-      avgDocumentSize: 375609, // ~367KB
-      languages: ['pt', 'en'],
-      categories: ['Técnico', 'Instalação', 'Configuração']
-    }
-  },
-  {
-    id: 'collection-004',
-    name: 'Políticas de RH',
-    description: 'Políticas internas de recursos humanos, benefícios e procedimentos administrativos.',
-    slug: 'politicas-rh',
-    documentCount: 23,
-    agentCount: 1,
-    tags: ['rh', 'políticas', 'benefícios'],
-    isActive: false,
-    visibility: 'private',
-    createdBy: {
-      id: '5',
-      name: 'Ana Oliveira',
-      avatar: '/avatars/ana-oliveira.jpg'
-    },
-    updatedBy: {
-      id: '5',
-      name: 'Ana Oliveira',
-      avatar: '/avatars/ana-oliveira.jpg'
-    },
-    createdAt: '2024-01-03T08:45:00Z',
-    updatedAt: '2024-01-15T13:20:00Z',
-    lastSyncAt: '2024-01-14T18:00:00Z',
-    syncStatus: 'error',
-    metadata: {
-      totalSize: 5242880, // 5MB
-      avgDocumentSize: 227952, // ~223KB
-      languages: ['pt'],
-      categories: ['RH', 'Políticas', 'Benefícios']
-    }
-  }
-];
 
 function getStatusIcon(status: string) {
   switch (status) {
@@ -253,12 +111,33 @@ export default function CollectionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedVisibility, setSelectedVisibility] = useState('all');
+  const [collectionStats, setCollectionStats] = useState({
+    totalCollections: 0,
+    activeCollections: 0,
+    totalDocuments: 0,
+    totalSize: 0,
+    collectionsByStatus: {},
+  });
 
-
-  // Carregar coleções da API
+  // Carregar coleções e estatísticas da API
   useEffect(() => {
     loadCollections();
+    loadCollectionStats();
   }, []);
+
+  const loadCollectionStats = async () => {
+    try {
+      const response = await collectionService.getCollectionStats();
+      if (response.success) {
+        setCollectionStats(response.data);
+      } else {
+        toast.error('Erro ao carregar estatísticas das coleções');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas das coleções:', error);
+      toast.error('Erro ao carregar estatísticas das coleções');
+    }
+  };
 
   const loadCollections = async () => {
     try {
@@ -268,7 +147,9 @@ export default function CollectionsPage() {
         setCollections(response.data.collections.map(collection => ({
           ...collection,
           slug: collection.name.toLowerCase().replace(/\s+/g, '-'),
-          agentCount: 0, // TODO: implementar contagem de agentes
+          agentCount: collection.agentCount || 0, // Assumindo que a API pode retornar agentCount, caso contrário, 0
+          documentCount: collection.documentCount || 0,
+          totalSize: collection.totalSize || 0,
           syncStatus: collection.status === 'active' ? 'synced' : 'pending' as any,
           lastSyncAt: collection.updatedAt,
           visibility: collection.settings?.isPublic ? 'public' : 'internal' as any,
@@ -308,11 +189,11 @@ export default function CollectionsPage() {
   });
 
   const stats = {
-    total: collections.length,
-    active: collections.filter(c => c.status === 'active').length,
-    totalDocuments: collections.reduce((acc, c) => acc + (c.documentCount || 0), 0),
-    totalAgents: collections.reduce((acc, c) => acc + (c.agentCount || 0), 0),
-    totalSize: collections.reduce((acc, c) => acc + (c.totalSize || 0), 0)
+    total: collectionStats.totalCollections,
+    active: collectionStats.activeCollections,
+    totalDocuments: collectionStats.totalDocuments,
+    totalAgents: collections.reduce((acc, c) => acc + (c.agentCount || 0), 0), // agentCount ainda não vem da API de stats
+    totalSize: collectionStats.totalSize
   };
 
 
@@ -363,15 +244,15 @@ export default function CollectionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Collections de Conhecimento</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Coleção de Conhecimento</h1>
           <p className="text-muted-foreground">
-            Organize e gerencie suas bases de conhecimento em collections temáticas
+            Organize e gerencie suas bases de conhecimento em coleções temáticas
           </p>
         </div>
         <Link href="/dashboard/knowledge/collections/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Nova Collection
+            Nova Coleção
           </Button>
         </Link>
       </div>
@@ -380,7 +261,7 @@ export default function CollectionsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Collections</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Coleção</CardTitle>
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -396,11 +277,11 @@ export default function CollectionsPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDocuments}</div>
-            <p className="text-xs text-muted-foreground">
-              Distribuídos nas collections
-            </p>
-          </CardContent>
+              <div className="text-2xl font-bold">{collectionStats.totalDocuments}</div>
+              <p className="text-xs text-muted-foreground">
+                Distribuídos nas coleções
+              </p>
+            </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -408,11 +289,11 @@ export default function CollectionsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAgents}</div>
-            <p className="text-xs text-muted-foreground">
-              Usando as collections
-            </p>
-          </CardContent>
+              <div className="text-2xl font-bold">{collections.reduce((acc, c) => acc + (c.agentCount || 0), 0)}</div>
+              <p className="text-xs text-muted-foreground">
+                Usando as coleções
+              </p>
+            </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -420,11 +301,11 @@ export default function CollectionsPage() {
             <Archive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatBytes(stats.totalSize)}</div>
-            <p className="text-xs text-muted-foreground">
-              Espaço utilizado
-            </p>
-          </CardContent>
+              <div className="text-2xl font-bold">{formatBytes(collectionStats.totalSize)}</div>
+              <p className="text-xs text-muted-foreground">
+                Espaço utilizado
+              </p>
+            </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -434,7 +315,7 @@ export default function CollectionsPage() {
           <CardContent>
             <div className="text-2xl font-bold">Hoje</div>
             <p className="text-xs text-muted-foreground">
-              Collections sincronizadas
+              Coleções sincronizadas
             </p>
           </CardContent>
         </Card>
@@ -445,7 +326,7 @@ export default function CollectionsPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar collections..."
+            placeholder="Buscar coleções..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -632,18 +513,18 @@ export default function CollectionsPage() {
         <Card className="text-center py-12">
           <CardContent>
             <FolderOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhuma collection encontrada</h3>
+            <h3 className="text-lg font-medium mb-2">Nenhuma coleção encontrada</h3>
             <p className="text-muted-foreground mb-4">
               {searchTerm || selectedStatus !== 'all' || selectedVisibility !== 'all'
                 ? 'Tente ajustar os filtros de busca'
-                : 'Comece criando sua primeira collection de conhecimento'
+                : 'Comece criando sua primeira coleção de conhecimento'
               }
             </p>
             {!searchTerm && selectedStatus === 'all' && selectedVisibility === 'all' && (
               <Link href="/dashboard/knowledge/collections/new">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Collection
+                  Criar Primeira Coleção
                 </Button>
               </Link>
             )}

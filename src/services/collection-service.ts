@@ -102,11 +102,27 @@ export interface UploadDocumentDto {
 }
 
 export interface CollectionStats {
+<<<<<<< HEAD
   totalCollections: number;
   activeCollections: number;
   totalDocuments: number;
   totalSize: number;
   collectionsByStatus: Record<string, number>;
+=======
+  id: string;
+  name: string;
+  description?: string;
+  documentsCount: number;
+  chunksCount: number;
+  vectorSize: number;
+  distance: string;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastIndexedAt?: Date;
+  embeddingModel: string;
+  settings: Record<string, any>;
+>>>>>>> feature/agent_layout
 }
 
 class CollectionService {
