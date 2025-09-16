@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import agentService, { Agent } from '@/services/agent-service';
 import { chatService, Chat, Message, CreateChatDto, SendMessageDto } from '@/services/chat-service';
+import ReactMarkdown from 'react-markdown';
 
 export default function AgentChatPage() {
   const params = useParams();
@@ -322,7 +323,9 @@ export default function AgentChatPage() {
                           : 'bg-muted'
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="prose prose-sm max-w-none text-current">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </div>
                       {message.metadata?.sources && message.metadata.sources.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-opacity-20 text-xs opacity-75">
                           <p>📚 Fontes: {message.metadata.sources.join(', ')}</p>
