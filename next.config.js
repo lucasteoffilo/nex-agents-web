@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Temporariamente removido para permitir a compilação
+  // Temporariamente desativado para resolver problemas com páginas dinâmicas
   // output: 'export',
+  // Configurações para ignorar erros de páginas dinâmicas
+  skipTrailingSlashRedirect: true,
+  skipMiddlewareUrlNormalize: true,
   trailingSlash: true,
   images: {
     domains: ['localhost', 'api.nex.com'],

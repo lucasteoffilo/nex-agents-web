@@ -1,4 +1,4 @@
-# Multi-stage build para Next.js com nginx
+# Multi-stage build para Next.js com Node.js
  
 # Stage 1: Instalar dependências
 FROM node:18-alpine AS deps
@@ -13,30 +13,28 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build da aplicação Next.js para export estático
+# Build da aplicação Next.js
 RUN npm run build
 
-# Stage 3: Nginx para servir arquivos estáticos
-FROM nginx:alpine AS production
+# Stage 3: Produção com Node.js
+FROM node:18-alpine AS production
+WORKDIR /app
 
 # Instalar curl para healthcheck
 RUN apk add --no-cache curl
 
-# Remover configuração padrão do nginx
-RUN rm -rf /usr/share/nginx/html/*
+# Copiar arquivos necessários para executar o Next.js
+COPY --from=builder /app/next.config.js ./
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
 
-# Copiar arquivos exportados do Next.js
-COPY --from=builder /app/out /usr/share/nginx/html
+# Configurar comando para iniciar o servidor Next.js
+EXPOSE 3000
+CMD ["npm", "start"]
 
-# Copiar configuração customizada do nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+# Healthcheck para verificar se o servidor está rodando
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -f http://localhost:3000/ || exit 1
 
-# Expor porta 80
-EXPOSE 80
-
-# Comando para iniciar nginx
-CMD ["nginx", "-g", "daemon off;"]
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+# Fim do Dockerfile
