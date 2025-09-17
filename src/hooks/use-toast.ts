@@ -1,7 +1,6 @@
 import * as React from "react"
 
 import { ToastAction } from "@/components/ui/toast"
-import { toast as showToast } from "@/components/ui/use-toast"
 import { toast } from "sonner"
 
 export function useToast() {
@@ -21,10 +20,10 @@ export function useToast() {
 
     if (toasts.length > 0) {
       const timer = setTimeout(() => {
-        const [toast, ...rest] = toasts
-        showToast(toast)
+        const [toastItem, ...rest] = toasts
+        toast(toastItem.title || '', { description: toastItem.description })
         setToasts(rest)
-      }, toast?.duration || 0)
+      }, toasts[0]?.duration || 3000)
 
       return () => clearTimeout(timer)
     }

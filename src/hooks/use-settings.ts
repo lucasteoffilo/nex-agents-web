@@ -172,13 +172,12 @@ export function useSettings() {
   const loadUserSettings = async () => {
     try {
       setError(null);
-      const response = await executeUserSettingsCall(() => apiService.getSettings());
+      const response = await executeUserSettingsCall(async () => {
+        const result = await apiService.getSettings();
+        return result.data;
+      });
       
-      if (response.success && response.data) {
-        setUserSettings(response.data);
-      } else {
-        throw new Error(response.message || 'Erro ao carregar configurações');
-      }
+      setUserSettings(response);
     } catch (err) {
       // Erro já tratado pelo hook de retry
       console.error('Erro ao carregar configurações do usuário:', err);
@@ -189,13 +188,12 @@ export function useSettings() {
   const loadTenantSettings = async () => {
     try {
       setError(null);
-      const response = await executeTenantSettingsCall(() => apiService.getTenantSettings());
+      const response = await executeTenantSettingsCall(async () => {
+        const result = await apiService.getTenantSettings();
+        return result.data;
+      });
       
-      if (response.success && response.data) {
-        setTenantSettings(response.data);
-      } else {
-        throw new Error(response.message || 'Erro ao carregar configurações do tenant');
-      }
+      setTenantSettings(response);
     } catch (err) {
       // Erro já tratado pelo hook de retry
       console.error('Erro ao carregar configurações do tenant:', err);
@@ -208,15 +206,14 @@ export function useSettings() {
       setIsSaving(true);
       setError(null);
       
-      const response = await executeUserSettingsCall(() => apiService.updateSettings(settings));
+      const response = await executeUserSettingsCall(async () => {
+        const result = await apiService.updateSettings(settings);
+        return result.data;
+      });
       
-      if (response.success && response.data) {
-        setUserSettings(response.data);
-        toast.success('Configurações atualizadas com sucesso!');
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Erro ao atualizar configurações');
-      }
+      setUserSettings(response);
+      toast.success('Configurações atualizadas com sucesso!');
+      return response;
     } catch (err) {
       // Erro já tratado pelo hook de retry
       throw err;
@@ -231,15 +228,14 @@ export function useSettings() {
       setIsSaving(true);
       setError(null);
       
-      const response = await executeTenantSettingsCall(() => apiService.updateTenantSettings(settings));
+      const response = await executeTenantSettingsCall(async () => {
+        const result = await apiService.updateTenantSettings(settings);
+        return result.data;
+      });
       
-      if (response.success && response.data) {
-        setTenantSettings(response.data);
-        toast.success('Configurações do tenant atualizadas com sucesso!');
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Erro ao atualizar configurações do tenant');
-      }
+      setTenantSettings(response);
+      toast.success('Configurações do tenant atualizadas com sucesso!');
+      return response;
     } catch (err) {
       // Erro já tratado pelo hook de retry
       throw err;
@@ -274,7 +270,7 @@ export function useSettings() {
       return updateUserSettings(defaultUserSettings);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao resetar configurações';
-      setError(errorMessage);
+      setError(new AppError(errorMessage, 'RESET_ERROR'));
       toast.error(errorMessage);
       throw err;
     } finally {

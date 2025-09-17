@@ -10,7 +10,12 @@ const DynamicChatButton = dynamic(
   () => import('@/components/chat-button').then(mod => mod.ChatButton),
   {
     ssr: false,
-    loading: () => import('@/components/chat-button').then(mod => mod.StaticChatButton())
+    loading: () => (
+      <Button size="sm" variant="outline" disabled>
+        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+        Carregando...
+      </Button>
+    )
   }
 );
 import { Button } from '@/components/ui/button';
@@ -208,7 +213,7 @@ export default function AgentesPage() {
   const filteredAgents = agents.filter(agent => {
     const matchesSearch = debouncedSearchTerm === '' || 
       agent.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-      agent.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+      (agent.description && agent.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
     
     const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
     
@@ -222,9 +227,9 @@ export default function AgentesPage() {
     const total = filteredAgents.length;
     const active = filteredAgents.filter(agent => agent.status === 'active').length;
     const training = filteredAgents.filter(agent => agent.status === 'training').length;
-    const totalConversations = filteredAgents.reduce((sum, agent) => sum + (agent.conversations || 0), 0);
+    const totalConversations = filteredAgents.reduce((sum, agent) => sum + (agent.metrics?.totalConversations || 0), 0);
     const avgSuccessRate = filteredAgents.length > 0 
-      ? filteredAgents.reduce((sum, agent) => sum + (agent.successRate || 0), 0) / filteredAgents.length
+      ? filteredAgents.reduce((sum, agent) => sum + (agent.metrics?.successRate || 0), 0) / filteredAgents.length
       : 0;
     
     return {
@@ -453,7 +458,7 @@ export default function AgentesPage() {
               
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {agent.description}
+                  {agent.description || 'Sem descrição'}
                 </p>
                 
                 <div className="flex items-center justify-between text-sm">
@@ -466,7 +471,7 @@ export default function AgentesPage() {
                     </Badge>
                   </div>
                   <div className="text-muted-foreground">
-                    {agent.flows} flows
+                    0 flows
                   </div>
                 </div>
                 
@@ -484,7 +489,7 @@ export default function AgentesPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Tempo de Resposta</p>
-                    <p className="font-semibold">{agent.metrics?.avgResponseTime?.toFixed(1) || 0}s</p>
+                    <p className="font-semibold">{agent.metrics?.averageResponseTime ? (agent.metrics.averageResponseTime / 1000).toFixed(1) : 0}s</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Última Atualização</p>
@@ -492,9 +497,9 @@ export default function AgentesPage() {
                   </div>
                 </div>
                 
-                {agent.lastTrained && (
+                {agent.lastTrainedAt && (
                   <div className="text-xs text-muted-foreground">
-                    Último treinamento: {formatDate(agent.lastTrained)}
+                    Último treinamento: {formatDate(agent.lastTrainedAt)}
                   </div>
                 )}
                 

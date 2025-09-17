@@ -52,7 +52,10 @@ export enum ErrorCodes {
   
   // Limites
   RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED'
+  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
+  
+  // Outros
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
 // Classe de erro customizada

@@ -36,10 +36,10 @@ export function useSocket() {
 export function SocketProvider({ children }: SocketProviderProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { user, isAuthenticated } = useMultiTenantAuth();
+  const { user } = useMultiTenantAuth();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (user) {
       initializeSocket();
     } else {
       disconnectSocket();
@@ -48,7 +48,7 @@ export function SocketProvider({ children }: SocketProviderProps) {
     return () => {
       disconnectSocket();
     };
-  }, [isAuthenticated, user]);
+  }, [user]);
 
   const initializeSocket = () => {
     if (typeof window === 'undefined') return;
@@ -70,7 +70,6 @@ export function SocketProvider({ children }: SocketProviderProps) {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: 5,
     });
 
     // Event listeners

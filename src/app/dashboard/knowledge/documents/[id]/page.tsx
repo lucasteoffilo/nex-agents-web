@@ -108,6 +108,7 @@ interface Version {
   version: number;
   title: string;
   description: string;
+  content: string;
   author: {
     id: string;
     name: string;
@@ -115,6 +116,7 @@ interface Version {
   createdAt: string;
   changes: string[];
   size: number;
+  contentHash: string;
 }
 
 const mockDocument: Document = {
@@ -286,6 +288,7 @@ const mockVersions: Version[] = [
     version: 3,
     title: 'Versão 3.0 - Atualização de procedimentos',
     description: 'Adicionadas seções sobre situações especiais e métricas de qualidade',
+    content: 'Conteúdo da versão 3.0 com procedimentos atualizados...',
     author: {
       id: '1',
       name: 'Ana Silva'
@@ -297,13 +300,15 @@ const mockVersions: Version[] = [
       'Melhorados exemplos de procedimentos',
       'Corrigidos erros de formatação'
     ],
-    size: 2048576
+    size: 2048576,
+    contentHash: 'abc123def456'
   },
   {
     id: '2',
     version: 2,
     title: 'Versão 2.0 - Expansão de conteúdo',
     description: 'Adicionados procedimentos padrão detalhados',
+    content: 'Conteúdo da versão 2.0 com procedimentos expandidos...',
     author: {
       id: '1',
       name: 'Ana Silva'
@@ -314,13 +319,15 @@ const mockVersions: Version[] = [
       'Adicionados exemplos práticos',
       'Melhorada estrutura do documento'
     ],
-    size: 1843200
+    size: 1843200,
+    contentHash: 'def456ghi789'
   },
   {
     id: '1',
     version: 1,
     title: 'Versão 1.0 - Versão inicial',
     description: 'Primeira versão do guia de atendimento',
+    content: 'Conteúdo da versão 1.0 inicial do guia...',
     author: {
       id: '1',
       name: 'Ana Silva'
@@ -331,7 +338,8 @@ const mockVersions: Version[] = [
       'Definição de princípios fundamentais',
       'Estrutura básica do guia'
     ],
-    size: 1536000
+    size: 1536000,
+    contentHash: 'ghi789jkl012'
   }
 ];
 
@@ -464,11 +472,11 @@ export default function DocumentDetailPage() {
     try {
       await restoreVersion(versionId);
       // Atualizar o documento local após restauração
-      const restoredVersion = versions?.find(v => v.id === versionId);
-      if (restoredVersion) {
+      const restoredVersion = Array.isArray(versions) ? versions.find((v: any) => v.id === versionId) : null;
+      if (restoredVersion && typeof restoredVersion === 'object' && 'version' in restoredVersion) {
         setDocument(prev => ({
           ...prev,
-          version: restoredVersion.version + 1, // Nova versão criada
+          version: (restoredVersion as any).version + 1, // Nova versão criada
           updatedAt: new Date().toISOString()
         }));
       }
@@ -489,7 +497,7 @@ export default function DocumentDetailPage() {
   if (showVersionComparison) {
     return (
       <VersionComparison
-        versions={versions || mockVersions}
+        versions={Array.isArray(versions) ? versions : mockVersions}
         currentVersionId={document.version.toString()}
         onClose={() => setShowVersionComparison(false)}
         onRestoreVersion={handleRestoreVersion}
@@ -665,7 +673,7 @@ export default function DocumentDetailPage() {
             Comentários ({comments.length})
           </TabsTrigger>
           <TabsTrigger value="versions">
-            Versões ({versions.length})
+            Versões ({Array.isArray(versions) ? versions.length : 0})
           </TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
@@ -852,7 +860,7 @@ export default function DocumentDetailPage() {
               </div>
             )}
             
-            {(versions || mockVersions).map((version) => (
+            {(Array.isArray(versions) ? versions : mockVersions).map((version: any) => (
               <Card key={version.id}>
                 <CardContent className="p-4">
                   <div className="space-y-3">
@@ -913,7 +921,7 @@ export default function DocumentDetailPage() {
                     <div className="space-y-1">
                       <h4 className="text-sm font-medium">Alterações:</h4>
                       <ul className="text-sm text-muted-foreground space-y-1">
-                        {version.changes.map((change, index) => (
+                        {version.changes.map((change: any, index: number) => (
                           <li key={index} className="flex items-start gap-2">
                             <span className="text-green-600 mt-1">•</span>
                             <span>{change}</span>

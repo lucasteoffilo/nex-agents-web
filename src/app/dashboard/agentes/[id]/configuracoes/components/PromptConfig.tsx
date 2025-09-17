@@ -39,6 +39,7 @@ interface ContextualPrompt {
   trigger: string;
   prompt: string;
   active: boolean;
+  priority?: number;
 }
 
 interface ResponseTemplate {
@@ -98,8 +99,10 @@ export default function PromptConfig({ agent, initialConfig, onConfigChange }: P
   const addContextualPrompt = () => {
     const newPrompt: ContextualPrompt = {
       id: Date.now().toString(),
+      name: 'Novo Prompt',
       trigger: 'palavra-chave',
       prompt: 'Prompt contextual aqui',
+      active: true,
       priority: 1
     };
     handleConfigUpdate('contextualPrompts', [...(config.contextualPrompts || []), newPrompt]);
@@ -121,8 +124,9 @@ export default function PromptConfig({ agent, initialConfig, onConfigChange }: P
     const newTemplate: ResponseTemplate = {
       id: Date.now().toString(),
       name: 'Novo Template',
+      category: 'geral',
       template: 'Template de resposta aqui',
-      category: 'geral'
+      variables: []
     };
     handleConfigUpdate('responseTemplates', [...(config.responseTemplates || []), newTemplate]);
   };

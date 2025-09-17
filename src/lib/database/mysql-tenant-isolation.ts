@@ -43,8 +43,6 @@ export class MySQLTenantIsolation {
       ...dbConfig,
       connectionLimit: 20,
       queueLimit: 0,
-      acquireTimeout: 60000,
-      timeout: 60000,
     });
   }
 
@@ -161,9 +159,9 @@ export class MySQLTenantIsolation {
   cleanupExpiredConnections(): void {
     const now = new Date();
     
-    for (const [tenantId, tenantConnection] of tenantConnections.entries()) {
+    for (const [tenantId, tenantConnection] of Array.from(tenantConnections.entries())) {
       if (!this.isConnectionValid(tenantConnection)) {
-        tenantConnection.connection.release();
+        tenantConnection.connection.end();
         tenantConnections.delete(tenantId);
       }
     }
@@ -173,12 +171,19 @@ export class MySQLTenantIsolation {
    * Fechar todas as conexões
    */
   async closeAllConnections(): Promise<void> {
-    for (const [tenantId, tenantConnection] of tenantConnections.entries()) {
-      tenantConnection.connection.release();
+    for (const [tenantId, tenantConnection] of Array.from(tenantConnections.entries())) {
+      tenantConnection.connection.end();
       tenantConnections.delete(tenantId);
     }
     
     await this.pool.end();
+  }
+
+  /**
+   * Obter conexão do pool
+   */
+  async getPoolConnection(): Promise<mysql.PoolConnection> {
+    return await this.pool.getConnection();
   }
 }
 
@@ -353,7 +358,7 @@ export const RLS_TRIGGERS = {
  */
 export async function applyRLSPolicies(): Promise<void> {
   const isolation = MySQLTenantIsolation.getInstance();
-  const connection = await isolation.pool.getConnection();
+  const connection = await isolation.getPoolConnection();
   
   try {
     // Aplicar views

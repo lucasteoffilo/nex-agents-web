@@ -63,7 +63,7 @@ export function useApiRetry<T>(options: UseApiRetryOptions = {}) {
         const appError = error as AppError;
         
         // Se não é um erro que pode ser retentado ou é a última tentativa
-        if (!isRetryableError(appError) || attempt === maxAttempts) {
+        if (!isRetryableError(appError.code) || attempt === maxAttempts) {
           setState({ isLoading: false, error: appError, attempt });
           onError?.(appError);
           throw appError;
@@ -99,7 +99,7 @@ export function useApiRetry<T>(options: UseApiRetryOptions = {}) {
     isLoading: state.isLoading,
     error: state.error,
     attempt: state.attempt,
-    canRetry: state.error ? isRetryableError(state.error) : false
+    canRetry: state.error ? isRetryableError(state.error.code) : false
   };
 }
 

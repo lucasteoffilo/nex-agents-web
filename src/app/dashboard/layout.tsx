@@ -162,7 +162,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     });
     
     setExpandedItems(prev => {
-      const newExpanded = [...new Set([...prev, ...itemsToExpand])];
+      const newExpanded = Array.from(new Set([...prev, ...itemsToExpand]));
       return newExpanded;
     });
   }, [pathname]);

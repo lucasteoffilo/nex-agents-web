@@ -145,7 +145,7 @@ export function TenantSelector({ className, showDetails = false }: TenantSelecto
   }, [availableTenants]);
 
   // Renderizar tenant na árvore
-  const renderTenantTree = (tenants: (Tenant & { children: Tenant[] })[], depth = 0) => {
+  const renderTenantTree = (tenants: Tenant[], depth = 0) => {
     return tenants.map(t => (
       <div key={t.id} className={`${depth > 0 ? 'ml-4 border-l border-gray-200 pl-4' : ''}`}>
         <div
@@ -167,8 +167,8 @@ export function TenantSelector({ className, showDetails = false }: TenantSelecto
               </div>
               <div className="flex items-center space-x-2 mt-1">
                 {getLevelBadge(t.level || 0)}
-                {t.settings?.industry && (
-                  <span className="text-xs text-gray-500">{t.settings.industry}</span>
+                {t.metadata?.industry && (
+                  <span className="text-xs text-gray-500">{t.metadata.industry}</span>
                 )}
               </div>
             </div>
@@ -180,12 +180,6 @@ export function TenantSelector({ className, showDetails = false }: TenantSelecto
             </Badge>
           )}
         </div>
-        
-        {t.children.length > 0 && (
-          <div className="mt-2">
-            {renderTenantTree(t.children, depth + 1)}
-          </div>
-        )}
       </div>
     ));
   };

@@ -59,7 +59,7 @@ export default function NewCollectionPage() {
       });
       
       toast.success('Coleção criada com sucesso!');
-      router.push(`/dashboard/knowledge/collections/${newCollection.id}`);
+      router.push(`/dashboard/knowledge/collections/${newCollection.data?.id}`);
     } catch (error) {
       console.error('Erro ao criar coleção:', error);
       toast.error('Erro ao criar coleção. Tente novamente.');

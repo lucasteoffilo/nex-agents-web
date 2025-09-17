@@ -66,7 +66,7 @@ export default function TestMiddlewarePage() {
     .then(response => {
       addLog(`Status da resposta: ${response.status}`);
       addLog(`URL final: ${response.url}`);
-      addLog(`Headers: ${JSON.stringify([...response.headers.entries()])}`);
+      addLog(`Headers: ${JSON.stringify(Array.from(response.headers.entries()))}`);
       
       if (response.status === 200) {
         addLog('✅ Acesso permitido ao dashboard');

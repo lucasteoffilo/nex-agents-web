@@ -95,7 +95,7 @@ export function CreateVersionDialog({
       await createVersion({
         title: title.trim(),
         description: description.trim(),
-        changes: changes.map(change => change.text)
+        changes: changes.map(change => change.text).join('\n')
       });
 
       // Reset form

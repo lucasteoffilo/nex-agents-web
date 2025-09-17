@@ -196,10 +196,8 @@ export class QdrantMultiTenantService {
           chunkId: chunk.id,
           content: chunk.content,
           metadata: {
-            documentTitle: document.title,
+            documentTitle: document.name,
             documentType: document.type,
-            chunkIndex: chunk.chunkIndex,
-            tokens: chunk.tokens,
             createdAt: chunk.createdAt,
             ...chunk.metadata
           }
@@ -399,13 +397,25 @@ export class QdrantMultiTenantService {
         scrollResult.points.map(p => p.payload?.documentId)
       ).size;
 
+      // Extrair valores com segurança
+      const vectorConfig = info?.config?.params?.vectors || {};
+      const vectorSize = typeof vectorConfig.size === 'number' ? vectorConfig.size : 0;
+      
+      // Garantir que distance seja um dos valores permitidos
+      let distance: 'Cosine' | 'Euclid' | 'Dot' = 'Cosine';
+      if (vectorConfig.distance === 'Cosine' || vectorConfig.distance === 'Euclid' || vectorConfig.distance === 'Dot') {
+        distance = vectorConfig.distance;
+      }
+      
+      const pointsCount = info?.points_count || 0;
+      
       return {
         tenantId,
         collectionName,
-        vectorSize: info.config.params.vectors.size,
-        distance: info.config.params.vectors.distance,
+        vectorSize,
+        distance,
         documentsCount: uniqueDocuments,
-        chunksCount: info.points_count || 0
+        chunksCount: pointsCount
       };
     } catch (error) {
       console.error('Error getting tenant collection stats:', error);
@@ -505,14 +515,16 @@ export class QdrantMultiTenantService {
       }
 
       // Atualizar tenantId nos payloads e inserir na coleção de destino
-      const migratedPoints = scrollResult.points.map(point => ({
-        id: point.id,
-        vector: point.vector,
-        payload: {
-          ...point.payload,
-          tenantId: targetTenantId
-        }
-      }));
+      const migratedPoints = scrollResult.points
+        .filter(point => point.vector !== undefined && point.vector !== null)
+        .map(point => ({
+          id: point.id,
+          vector: point.vector as number[],
+          payload: {
+            ...point.payload,
+            tenantId: targetTenantId
+          }
+        }));
 
       await this.client.upsert(targetCollection, {
         wait: true,

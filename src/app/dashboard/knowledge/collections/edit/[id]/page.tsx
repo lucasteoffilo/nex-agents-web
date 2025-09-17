@@ -67,8 +67,7 @@ export default function EditCollectionPage() {
         name: data.name || '',
         description: data.description || '',
         isPublic: data.settings?.isPublic || false,
-        tags: (data.metadata?.tags || data.tags) || [],
-        embeddingConfig: data.embeddingConfig || {},
+        tags: data.metadata?.tags || [],
         metadata: data.metadata || {}
       });
     } catch (error) {
@@ -100,7 +99,6 @@ export default function EditCollectionPage() {
           isPublic: formData.isPublic
         },
         tags: formData.tags,
-        embeddingConfig: formData.embeddingConfig,
         metadata: formData.metadata
       });
       
@@ -167,7 +165,6 @@ export default function EditCollectionPage() {
 
   return (
     <div className="container mx-auto py-6">
-      {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Link href={`/dashboard/knowledge/collections/${collectionId}`}>
           <Button variant="ghost" size="sm">
@@ -178,312 +175,115 @@ export default function EditCollectionPage() {
         <div>
           <h1 className="text-2xl font-bold">Editar Coleção</h1>
           <p className="text-muted-foreground">
-            Edite as informações da coleção "{collection.name}"
+            Modifique as configurações da sua coleção
           </p>
         </div>
       </div>
 
-      {/* Form */}
-      <Card className="max-w-2xl">
-        <CardHeader>
-          <CardTitle>Informações da Coleção</CardTitle>
-          <CardDescription>
-            Atualize as informações da sua coleção
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Nome */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Básicas</CardTitle>
+            <CardDescription>
+              Configure o nome e descrição da coleção
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome da Coleção *</Label>
+              <Label htmlFor="name">Nome da Coleção</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Ex: Catálogo de Produtos"
+                placeholder="Digite o nome da coleção"
                 required
               />
             </div>
-
-            {/* Descrição */}
+            
             <div className="space-y-2">
               <Label htmlFor="description">Descrição</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Descreva o conteúdo e propósito desta coleção..."
-                rows={4}
+                placeholder="Descreva o propósito desta coleção"
+                rows={3}
               />
             </div>
 
-            {/* Visibilidade */}
-            <div className="space-y-3">
-              <Label>Visibilidade</Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isPublic"
-                  checked={formData.isPublic}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, isPublic: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="isPublic" className="text-sm font-normal">
-                  Coleção pública (visível para todos os usuários)
-                </Label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {formData.isPublic 
-                  ? 'Esta coleção será visível para todos os usuários da plataforma'
-                  : 'Esta coleção será visível apenas para você e usuários com permissão'
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="isPublic"
+                checked={formData.isPublic}
+                onCheckedChange={(checked) => 
+                  setFormData(prev => ({ ...prev, isPublic: checked as boolean }))
                 }
-              </p>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-3">
-              <Label>Tags</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyPress={handleTagInputKeyPress}
-                  placeholder="Adicionar tag..."
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addTag}
-                  disabled={!(tagInput || '').trim()}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Tags existentes */}
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Configurações Avançadas */}
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-                <ChevronDown className="h-4 w-4" />
-                Configurações Avançadas
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Configurações de Embedding</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                  <Label htmlFor="embeddingModel">Modelo</Label>
-                  <Input
-                    id="embeddingModel"
-                    value={formData.embeddingConfig?.model || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      embeddingConfig: {
-                        ...prev.embeddingConfig,
-                        model: e.target.value
-                      }
-                    }))}
-                    placeholder="Modelo de embedding"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="embeddingProvider">Provedor</Label>
-                  <Input
-                    id="embeddingProvider"
-                    value={formData.embeddingConfig?.provider || ''}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      embeddingConfig: {
-                        ...prev.embeddingConfig,
-                        provider: e.target.value
-                      }
-                    }))}
-                    placeholder="Provedor do modelo"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Opções</Label>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="allowDuplicates"
-                  checked={formData.settings?.allowDuplicates}
-                  onCheckedChange={(checked) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      settings: {
-                        ...prev.settings,
-                        allowDuplicates: checked as boolean
-                      }
-                    }))
-                  }
-                />
-                <Label htmlFor="allowDuplicates" className="text-sm font-normal">
-                  Permitir Duplicatas
-                </Label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Permite documentos duplicados na collection.
-              </p>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="autoIndex"
-                  checked={formData.settings?.autoIndex}
-                  onCheckedChange={(checked) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      settings: {
-                        ...prev.settings,
-                        autoIndex: checked as boolean
-                      }
-                    }))
-                  }
-                />
-                <Label htmlFor="autoIndex" className="text-sm font-normal">
-                  Indexação Automática
-                </Label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Indexa automaticamente novos documentos.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="chunkSize">Tamanho do Chunk</Label>
-                <Input
-                  id="chunkSize"
-                  type="number"
-                  value={formData.settings?.chunkSize || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: {
-                      ...prev.settings,
-                      chunkSize: parseInt(e.target.value)
-                    }
-                  }))}
-                  placeholder="Ex: 1000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="chunkOverlap">Sobreposição do Chunk</Label>
-                <Input
-                  id="chunkOverlap"
-                  type="number"
-                  value={formData.settings?.chunkOverlap || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: {
-                      ...prev.settings,
-                      chunkOverlap: parseInt(e.target.value)
-                    }
-                  }))}
-                  placeholder="Ex: 200"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="maxDocuments">Máximo de Documentos</Label>
-                <Input
-                  id="maxDocuments"
-                  type="number"
-                  value={formData.settings?.maxDocuments || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: {
-                      ...prev.settings,
-                      maxDocuments: parseInt(e.target.value)
-                    }
-                  }))}
-                  placeholder="Ex: 10000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="retentionDays">Dias de Retenção</Label>
-                <Input
-                  id="retentionDays"
-                  type="number"
-                  value={formData.settings?.retentionDays || ''}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: {
-                      ...prev.settings,
-                      retentionDays: parseInt(e.target.value)
-                    }
-                  }))}
-                  placeholder="Ex: 365"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="metadata">Metadados (JSON)</Label>
-              <Textarea
-                id="metadata"
-                value={JSON.stringify(formData.metadata || {}, null, 2)}
-                onChange={(e) => {
-                  try {
-                    const parsed = JSON.parse(e.target.value);
-                    setFormData(prev => ({
-                      ...prev,
-                      metadata: parsed
-                    }));
-                  } catch (error) {
-                    // Ignora erros de parsing
-                  }
-                }}
-                placeholder="{\n  "key": "value"\n}"
-                rows={4}
               />
+              <Label htmlFor="isPublic">Tornar coleção pública</Label>
             </div>
-              </CollapsibleContent>
-            </Collapsible>
+          </CardContent>
+        </Card>
 
-            {/* Botões */}
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={loading || !(formData.name || '').trim()}>
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Salvar Alterações
-                  </>
-                )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tags</CardTitle>
+            <CardDescription>
+              Adicione tags para organizar e categorizar sua coleção
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={handleTagInputKeyPress}
+                placeholder="Digite uma tag"
+              />
+              <Button type="button" onClick={addTag} variant="outline">
+                <Plus className="h-4 w-4" />
               </Button>
-              <Link href={`/dashboard/knowledge/collections/${collectionId}`}>
-                <Button type="button" variant="outline">
-                  Cancelar
-                </Button>
-              </Link>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+            
+            {formData.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {formData.tags.map((tag, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end gap-4">
+          <Link href={`/dashboard/knowledge/collections/${collectionId}`}>
+            <Button type="button" variant="outline">
+              Cancelar
+            </Button>
+          </Link>
+          <Button type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Alterações
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

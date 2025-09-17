@@ -23,7 +23,7 @@ interface KnowledgeConfigProps {
 
 interface KnowledgeConfiguration {
   selectedCollections: string[];
-  availableCollections: Collection[];
+  availableCollections: string[];
   searchSettings: SearchSettings;
   externalSources: ExternalSource[];
   enableWebSearch: boolean;
@@ -151,15 +151,7 @@ export default function KnowledgeConfig({ agent, initialConfig, onConfigChange }
           // Atualizar config com as coleções disponíveis
           setConfig(prev => ({
             ...prev,
-            availableCollections: collections.map(col => ({
-              id: col.id,
-              name: col.name,
-              description: col.description || '',
-              documentCount: col.documentCount || 0,
-              status: col.status === 'active' ? 'active' : 'error',
-              lastSync: col.updatedAt,
-              size: col.totalSize || 0
-            }))
+            availableCollections: collections.map((col: any) => col.name)
           }));
         }
       } catch (error) {
@@ -178,11 +170,11 @@ export default function KnowledgeConfig({ agent, initialConfig, onConfigChange }
     onConfigChange(newConfig);
   };
 
-  const handleCollectionToggle = (collectionId: string, checked: boolean) => {
+  const handleCollectionToggle = (collectionName: string, checked: boolean) => {
     const currentCollections = config.selectedCollections || [];
     const updated = checked 
-      ? [...currentCollections, collectionId]
-      : currentCollections.filter(id => id !== collectionId);
+      ? [...currentCollections, collectionName]
+      : currentCollections.filter(name => name !== collectionName);
     handleConfigUpdate('selectedCollections', updated);
   };
 
@@ -285,33 +277,28 @@ export default function KnowledgeConfig({ agent, initialConfig, onConfigChange }
             </div>
           ) : (
             <>
-              {(config.availableCollections || []).map((collection) => (
-                <div key={collection.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Checkbox
-                      checked={(config.selectedCollections || []).includes(collection.id)}
-                      onCheckedChange={(checked) => handleCollectionToggle(collection.id, checked as boolean)}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium">{collection.name}</h4>
-                        <Badge variant={getStatusColor(collection.status) as any}>
-                          {getStatusText(collection.status)}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{collection.description}</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                        <span>{collection.documentCount} documentos</span>
-                        <span>{formatFileSize(collection.size)}</span>
-                        <span>Última sync: {new Date(collection.lastSync).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              {(config.availableCollections || []).map((collectionName) => (
+                 <div key={collectionName} className="flex items-center justify-between p-4 border rounded-lg">
+                   <div className="flex items-center gap-4">
+                     <Checkbox
+                       checked={(config.selectedCollections || []).includes(collectionName)}
+                       onCheckedChange={(checked) => handleCollectionToggle(collectionName, checked as boolean)}
+                     />
+                     <div className="flex-1">
+                       <div className="flex items-center gap-2 mb-1">
+                         <h4 className="font-medium">{collectionName}</h4>
+                         <Badge variant={getStatusColor('active') as any}>
+                           {getStatusText('active')}
+                         </Badge>
+                       </div>
+                       <p className="text-sm text-muted-foreground">Coleção de conhecimento</p>
+                       <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                         <span>Documentos disponíveis</span>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               ))}
               
               {/* Mostrar coleções selecionadas */}
               {(config.selectedCollections || []).length > 0 && (
@@ -319,15 +306,11 @@ export default function KnowledgeConfig({ agent, initialConfig, onConfigChange }
                   <h4 className="font-medium mb-2">Coleções Selecionadas ({(config.selectedCollections || []).length})</h4>
                   <div className="flex flex-wrap gap-2">
                     {(config.selectedCollections || [])
-                      .map((collectionId) => {
-                        const collection = (config.availableCollections || []).find(c => c.id === collectionId);
-                        return collection ? (
-                          <Badge key={collectionId} variant="secondary">
-                            {collection.name}
-                          </Badge>
-                        ) : null;
-                      })
-                      .filter(Boolean)}
+                      .map((collectionName) => (
+                        <Badge key={collectionName} variant="secondary">
+                          {collectionName}
+                        </Badge>
+                      ))}
                   </div>
                 </div>
               )}

@@ -106,7 +106,7 @@ function formatBytes(bytes: number): string {
 }
 
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<KnowledgeBaseCollection[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -128,8 +128,8 @@ export default function CollectionsPage() {
   const loadCollectionStats = async () => {
     try {
       const response = await collectionService.getCollectionStats();
-      if (response.success) {
-        setCollectionStats(response.data);
+      if (response.success && response.data) {
+        setCollectionStats(response.data as any);
       } else {
         toast.error('Erro ao carregar estatísticas das coleções');
       }
@@ -143,13 +143,13 @@ export default function CollectionsPage() {
     try {
       setLoading(true);
       const response = await collectionService.getCollections();
-      if (response.success) {
+      if (response.success && response.data) {
         setCollections(response.data.collections.map(collection => ({
           ...collection,
           slug: collection.name.toLowerCase().replace(/\s+/g, '-'),
-          agentCount: collection.agentCount || 0, // Assumindo que a API pode retornar agentCount, caso contrário, 0
+          agentCount: (collection as any).agentCount || 0,
           documentCount: collection.documentCount || 0,
-          totalSize: collection.totalSize || 0,
+          totalSize: (collection as any).totalSize || 0,
           syncStatus: collection.status === 'active' ? 'synced' : 'pending' as any,
           lastSyncAt: collection.updatedAt,
           visibility: collection.settings?.isPublic ? 'public' : 'internal' as any,
@@ -177,11 +177,11 @@ export default function CollectionsPage() {
   const filteredCollections = collections.filter(collection => {
     const matchesSearch = collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (collection.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                         (collection.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                         ((collection as any).tags || []).some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = selectedStatus === 'all' || 
                          (selectedStatus === 'active' && collection.status === 'active') ||
                          (selectedStatus === 'inactive' && collection.status === 'inactive') ||
-                         (collection.syncStatus === selectedStatus);
+                         ((collection as any).syncStatus === selectedStatus);
     const matchesVisibility = selectedVisibility === 'all' || 
                              (selectedVisibility === 'public' && collection.settings?.isPublic) ||
         (selectedVisibility === 'internal' && !collection.settings?.isPublic);
@@ -192,7 +192,7 @@ export default function CollectionsPage() {
     total: collectionStats.totalCollections,
     active: collectionStats.activeCollections,
     totalDocuments: collectionStats.totalDocuments,
-    totalAgents: collections.reduce((acc, c) => acc + (c.agentCount || 0), 0), // agentCount ainda não vem da API de stats
+    totalAgents: collections.reduce((acc, c) => acc + ((c as any).agentCount || 0), 0), // agentCount ainda não vem da API de stats
     totalSize: collectionStats.totalSize
   };
 
@@ -289,7 +289,7 @@ export default function CollectionsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-              <div className="text-2xl font-bold">{collections.reduce((acc, c) => acc + (c.agentCount || 0), 0)}</div>
+              <div className="text-2xl font-bold">{collections.reduce((acc, c) => acc + ((c as any).agentCount || 0), 0)}</div>
               <p className="text-xs text-muted-foreground">
                 Usando as coleções
               </p>
@@ -369,7 +369,7 @@ export default function CollectionsPage() {
       {!loading && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredCollections.map((collection) => {
-          const StatusIcon = getStatusIcon(collection.syncStatus);
+          const StatusIcon = getStatusIcon((collection as any).syncStatus);
           return (
             <Card key={collection.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -383,12 +383,12 @@ export default function CollectionsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       {getVisibilityBadge(collection.settings?.isPublic ? 'public' : 'internal')}
-                      <div className={`flex items-center gap-1 text-xs ${getStatusColor(collection.syncStatus || 'synced')}`}>
-                        <StatusIcon className={`h-3 w-3 ${(collection.syncStatus || 'synced') === 'syncing' ? 'animate-spin' : ''}`} />
-                        {(collection.syncStatus || 'synced') === 'synced' && 'Sincronizada'}
-                        {(collection.syncStatus || 'synced') === 'syncing' && 'Sincronizando'}
-                        {(collection.syncStatus || 'synced') === 'error' && 'Erro'}
-                        {(collection.syncStatus || 'synced') === 'pending' && 'Pendente'}
+                      <div className={`flex items-center gap-1 text-xs ${getStatusColor((collection as any).syncStatus || 'synced')}`}>
+                        <StatusIcon className={`h-3 w-3 ${((collection as any).syncStatus || 'synced') === 'syncing' ? 'animate-spin' : ''}`} />
+                        {((collection as any).syncStatus || 'synced') === 'synced' && 'Sincronizada'}
+                        {((collection as any).syncStatus || 'synced') === 'syncing' && 'Sincronizando'}
+                        {((collection as any).syncStatus || 'synced') === 'error' && 'Erro'}
+                        {((collection as any).syncStatus || 'synced') === 'pending' && 'Pendente'}
                       </div>
                     </div>
                   </div>
@@ -462,22 +462,22 @@ export default function CollectionsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{collection.agentCount || 0}</span>
+                      <span className="font-medium">{(collection as any).agentCount || 0}</span>
                       <span className="text-muted-foreground">agentes</span>
                     </div>
                   </div>
 
                   {/* Tags */}
-                  {(collection.tags || []).length > 0 && (
+                  {((collection as any).tags || []).length > 0 && (
                     <div className="flex flex-wrap gap-1">
-                      {(collection.tags || []).slice(0, 3).map((tag) => (
+                      {((collection as any).tags || []).slice(0, 3).map((tag: string) => (
                         <Badge key={tag} variant="outline" className="text-xs">
                           {tag}
                         </Badge>
                       ))}
-                      {(collection.tags || []).length > 3 && (
+                      {((collection as any).tags || []).length > 3 && (
                         <Badge variant="outline" className="text-xs">
-                          +{(collection.tags || []).length - 3}
+                          +{((collection as any).tags || []).length - 3}
                         </Badge>
                       )}
                     </div>
@@ -493,10 +493,10 @@ export default function CollectionsPage() {
                       <span>Atualizada:</span>
                       <span>{formatRelativeTime(collection.updatedAt)}</span>
                     </div>
-                    {collection.lastSyncAt && (
+                    {(collection as any).lastSyncAt && (
                       <div className="flex justify-between">
                         <span>Última sync:</span>
-                        <span>{formatRelativeTime(collection.lastSyncAt)}</span>
+                        <span>{formatRelativeTime((collection as any).lastSyncAt)}</span>
                       </div>
                     )}
                   </div>

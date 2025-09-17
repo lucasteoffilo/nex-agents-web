@@ -70,8 +70,7 @@ export default function SettingsPage() {
     error,
     updateUserSettings,
     updateTenantSettings,
-    resetUserSettings,
-    resetTenantSettings
+    resetUserSettings
   } = useSettings();
 
   const handleSave = async () => {
@@ -135,7 +134,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2 text-red-600">
           <AlertCircle className="h-6 w-6" />
-          <span>Erro ao carregar configurações: {error}</span>
+          <span>Erro ao carregar configurações: {error?.message || 'Erro desconhecido'}</span>
         </div>
       </div>
     );

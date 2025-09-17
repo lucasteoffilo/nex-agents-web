@@ -15,6 +15,40 @@ export interface User {
   updatedAt: Date;
 }
 
+// DTOs para operações de chat
+export interface CreateChatDto {
+  title?: string;
+  type: 'support' | 'sales' | 'general';
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  userId?: string;
+  agentId?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface SendMessageDto {
+  chatId: string;
+  content: string;
+  type?: 'text' | 'image' | 'file' | 'audio' | 'video';
+  senderId?: string;
+  metadata?: {
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
+    fileUrl?: string;
+  };
+}
+
+export interface ChatStats {
+  totalChats: number;
+  activeChats: number;
+  closedChats: number;
+  waitingChats: number;
+  averageResponseTime: number;
+  averageResolutionTime: number;
+  satisfactionScore: number;
+  messagesCount: number;
+}
+
 export interface UserRole {
   id: string;
   name: string;
@@ -215,6 +249,7 @@ export interface AgentConfig {
     telegram?: boolean;
     webchat?: boolean;
     api?: boolean;
+  };
   knowledgeBase: {
       collectionIds: string[];
       searchThreshold: number;

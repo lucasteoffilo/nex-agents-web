@@ -236,7 +236,8 @@ export function useDocumentVersions(documentId: string) {
     async (data: CreateVersionData) => {
       try {
         const result = await createVersionMutation.mutateAsync(data);
-        return result;
+        const responseData = await result.json();
+        return responseData;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao criar nova versão';
         setError(errorMessage);
@@ -254,7 +255,8 @@ export function useDocumentVersions(documentId: string) {
           versionAId,
           versionBId,
         });
-        return result;
+        const data = await result.json();
+        return data;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao comparar versões';
         setError(errorMessage);
@@ -269,7 +271,8 @@ export function useDocumentVersions(documentId: string) {
     async (versionId: string) => {
       try {
         const result = await restoreVersionMutation.mutateAsync(versionId);
-        return result;
+        const data = await result.json();
+        return data;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao restaurar versão';
         setError(errorMessage);
@@ -286,8 +289,8 @@ export function useDocumentVersions(documentId: string) {
 
   return {
     // Dados
-    versions: versions?.data || [],
-    versioningStats: versioningStats?.data,
+    versions: versions || [],
+    versioningStats: versioningStats,
     
     // Estados de carregamento
     isLoading: isLoading || versionsLoading || statsLoading,
@@ -307,9 +310,9 @@ export function useDocumentVersions(documentId: string) {
     clearError,
     
     // Utilitários
-    hasVersions: versions?.data?.length > 0,
-    latestVersion: versions?.data?.[0],
-    versionCount: versions?.data?.length || 0,
+    hasVersions: Array.isArray(versions) && versions.length > 0,
+    latestVersion: Array.isArray(versions) ? versions[0] : null,
+    versionCount: Array.isArray(versions) ? versions.length : 0,
   };
 }
 
@@ -331,7 +334,7 @@ export function useVersionComparison(documentId: string, versionAId?: string, ve
   });
 
   return {
-    comparison: comparison?.data as VersionComparison | undefined,
+    comparison: comparison as VersionComparison | undefined,
     isLoading,
     error: error?.message,
     refetch,

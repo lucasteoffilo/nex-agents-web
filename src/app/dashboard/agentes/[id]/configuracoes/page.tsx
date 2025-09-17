@@ -155,7 +155,7 @@ export default function AgentConfigPage() {
 
   const handleConfigChange = (section: string, config: any) => {
     console.log('📝 Page - handleConfigChange:', { section, config });
-    setConfigChanges(prev => {
+    setConfigChanges((prev: any) => {
       const newChanges = { ...prev, [section]: config };
       console.log('📝 Page - configChanges updated:', newChanges);
       return newChanges;
@@ -257,7 +257,7 @@ export default function AgentConfigPage() {
       }
       
       // Construir o objeto settings corretamente
-      const newSettings: Partial<AgentSettings> = {
+      const newSettings: any = {
         ...(agent.settings || {}), // Copia as configurações existentes do agente
         ...(configChanges.settings || {}), // Sobrescreve com quaisquer mudanças gerais de settings
       };

@@ -67,6 +67,9 @@ export default function AgentChatPage() {
       try {
         // Carregar dados do agente
         const agentResponse = await agentService.getAgent(agentId);
+        if (!agentResponse.data) {
+          throw new Error('Agente não encontrado');
+        }
         setAgent(agentResponse.data);
 
         // Criar ou obter chat existente
@@ -76,6 +79,9 @@ export default function AgentChatPage() {
         };
         
         const chatResponse = await chatService.createChat(createChatDto);
+        if (!chatResponse.data) {
+          throw new Error('Erro ao criar chat');
+        }
         setChat(chatResponse.data);
 
         // Carregar mensagens existentes se houver
@@ -120,8 +126,8 @@ export default function AgentChatPage() {
       chatId: chat.id,
       content: 'Enviando áudio...', // Placeholder
       type: 'user',
-      timestamp: new Date().toISOString(),
-      audioUrl: URL.createObjectURL(audioBlob), // Para pré-visualização
+      timestamp: new Date().toISOString()
+      // audioUrl: URL.createObjectURL(audioBlob), // Removido pois não existe no tipo Message
     };
     setMessages((prev) => [...prev, tempUserMessage]);
 
@@ -148,8 +154,8 @@ export default function AgentChatPage() {
         chatId: chat.id,
         content: 'Resposta em áudio',
         type: 'assistant',
-        timestamp: new Date().toISOString(),
-        audioUrl: audioUrl,
+        timestamp: new Date().toISOString()
+        // audioUrl: audioUrl, // Removido pois não existe no tipo Message
       };
       setMessages((prev) => [...prev, tempAssistantMessage]);
 
@@ -237,11 +243,7 @@ export default function AgentChatPage() {
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-full bg-brand-500 flex items-center justify-center text-white">
-            {agent?.avatar ? (
-              <img src={agent.avatar} alt={agent.name} className="h-10 w-10 rounded-full" />
-            ) : (
-              <Bot className="h-5 w-5" />
-            )}
+            <Bot className="h-5 w-5" />
           </div>
           <div>
             <h2 className="font-semibold text-base">
@@ -274,11 +276,7 @@ export default function AgentChatPage() {
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="h-20 w-20 rounded-full bg-brand-500 flex items-center justify-center text-white mb-5">
-              {agent?.avatar ? (
-                <img src={agent.avatar} alt={agent.name} className="h-20 w-20 rounded-full" />
-              ) : (
-                <Bot className="h-10 w-10" />
-              )}
+              <Bot className="h-10 w-10" />
             </div>
             <h3 className="text-xl font-semibold">{agent?.name || 'Agente'}</h3>
             <p className="text-muted-foreground text-base max-w-md mt-3">
@@ -294,7 +292,7 @@ export default function AgentChatPage() {
           <>
             {messages.map((message, index) => {
               // const isUser = message.type === 'user';
-              const isUser = (message.type === 'user' || message.role === 'user');
+              const isUser = message.type === 'user';
               return (
                 <div 
                   key={message.id} 
@@ -308,11 +306,7 @@ export default function AgentChatPage() {
                         </div>
                       ) : (
                         <div className="h-8 w-8 rounded-full bg-brand-500 flex items-center justify-center text-white">
-                          {agent?.avatar ? (
-                            <img src={agent.avatar} alt={agent.name} className="h-8 w-8 rounded-full" />
-                          ) : (
-                            <Bot className="h-4 w-4" />
-                          )}
+                          <Bot className="h-4 w-4" />
                         </div>
                       )}
                     </div>
@@ -343,9 +337,9 @@ export default function AgentChatPage() {
                         })}`;
                       })()}
                     </div>
-                    {message.audioUrl && (
+                    {/* message.audioUrl && (
                       <audio controls autoPlay={message.type === 'assistant'} src={message.audioUrl} className="mt-2 w-full"></audio>
-                    )}
+                    ) */}
                     </Card>
                   </div>
                 </div>

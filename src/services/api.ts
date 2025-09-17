@@ -30,10 +30,10 @@ function handleApiError(error: AxiosError): AppError {
       errorCode = ErrorCodes.CONFLICT;
       break;
     case 429:
-      errorCode = ErrorCodes.RATE_LIMITED;
+      errorCode = ErrorCodes.RATE_LIMIT_EXCEEDED;
       break;
     case 500:
-      errorCode = ErrorCodes.INTERNAL_SERVER_ERROR;
+      errorCode = ErrorCodes.INTERNAL_ERROR;
       break;
     case 503:
       errorCode = ErrorCodes.SERVICE_UNAVAILABLE;
@@ -47,11 +47,11 @@ function handleApiError(error: AxiosError): AppError {
   }
 
   const appError = new AppError(
-    data?.message || error.message || 'Erro desconhecido',
+    data?.error?.message || error.message || 'Erro desconhecido',
     errorCode,
     status,
-    data?.details,
-    data?.field
+    data?.error?.details,
+    data?.validationErrors?.[0]?.field
   );
 
   // Exibir toast de erro (exceto para 401 que redireciona)

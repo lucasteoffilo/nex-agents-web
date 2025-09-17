@@ -99,16 +99,16 @@ export default function KnowledgePage() {
         documentService.getDocumentStats()
       ]);
 
-      if (documentsResponse.success) {
+      if (documentsResponse.success && documentsResponse.data) {
         setDocuments(documentsResponse.data.documents);
       }
 
-      if (collectionsResponse.success) {
+      if (collectionsResponse.success && collectionsResponse.data) {
         setCollections(collectionsResponse.data.collections);
       }
 
-      if (statsResponse.success) {
-        const apiStats = statsResponse.data;
+      if (statsResponse.success && statsResponse.data) {
+        const apiStats = statsResponse.data as any;
         setStats({
           total: apiStats.total,
           completed: apiStats.byStatus?.completed || 0,
@@ -435,7 +435,7 @@ export default function KnowledgePage() {
       ) : filteredDocuments.length > 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredDocuments.map((document) => {
-            const FileIcon = getFileIcon(document.mimeType || 'application/octet-stream');
+            const FileIcon = getFileIcon((document as any).mimeType || 'application/octet-stream');
             const StatusIcon = getStatusIcon(document.status);
             const collection = collections.find(c => c.id === document.collectionId);
             
@@ -452,7 +452,7 @@ export default function KnowledgePage() {
                           {document.originalName || document.filename}
                         </CardTitle>
                         <CardDescription className="text-xs">
-                          {formatBytes(document.size)}
+                          {formatBytes((document as any).size)}
                         </CardDescription>
                       </div>
                     </div>
@@ -483,10 +483,10 @@ export default function KnowledgePage() {
                       </div>
                     )}
                     
-                    {document.chunkCount && (
+                    {(document as any).chunkCount && (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <FileText className="h-3 w-3" />
-                        <span>{document.chunkCount} chunks</span>
+                        <span>{(document as any).chunkCount} chunks</span>
                       </div>
                     )}
                     

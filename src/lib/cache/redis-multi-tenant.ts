@@ -50,7 +50,6 @@ export class RedisMultiTenantCache {
 
     this.redis = new Redis(redisUrl || process.env.REDIS_URL || 'redis://localhost:6379', {
       maxRetriesPerRequest: this.config.maxRetriesPerRequest,
-      retryDelayOnFailover: this.config.retryDelayOnFailover,
       enableReadyCheck: this.config.enableReadyCheck,
       lazyConnect: true,
     });
@@ -295,11 +294,11 @@ export class RedisMultiTenantCache {
         serializedResult
       );
       
-      this.incrementStat(query.tenantId, 'sets');
+      this.incrementStat(query.tenantId || 'global', 'sets');
       return setResult === 'OK';
     } catch (error) {
       console.error('Error setting query cache:', error);
-      this.incrementStat(query.tenantId, 'errors');
+      this.incrementStat(query.tenantId || 'global', 'errors');
       return false;
     }
   }
@@ -313,15 +312,15 @@ export class RedisMultiTenantCache {
       const data = await this.redis.get(key);
       
       if (data) {
-        this.incrementStat(query.tenantId, 'hits');
+        this.incrementStat(query.tenantId || 'global', 'hits');
         return JSON.parse(data) as T;
       } else {
-        this.incrementStat(query.tenantId, 'misses');
+        this.incrementStat(query.tenantId || 'global', 'misses');
         return null;
       }
     } catch (error) {
       console.error('Error getting query cache:', error);
-      this.incrementStat(query.tenantId, 'errors');
+      this.incrementStat(query.tenantId || 'global', 'errors');
       return null;
     }
   }

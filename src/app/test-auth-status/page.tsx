@@ -107,7 +107,7 @@ export default function TestAuthStatusPage() {
               <div className="space-y-2">
                 <p><strong>ID:</strong> {tenant.id}</p>
                 <p><strong>Nome:</strong> {tenant.name}</p>
-                <p><strong>Status:</strong> {tenant.status}</p>
+                <p><strong>Status:</strong> {(tenant as any).status}</p>
                 <Badge variant="default">Tenant Ativo</Badge>
               </div>
             ) : (

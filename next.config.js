@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Temporariamente removido para permitir a compilação
+  // output: 'export',
   trailingSlash: true,
   images: {
     domains: ['localhost', 'api.nex.com'],
@@ -11,14 +12,15 @@ const nextConfig = {
     NEXT_PUBLIC_WORKER_URL: process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:3002',
     NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
-      },
-    ];
-  },
+  // Rewrites não funcionam com output: 'export'
+  // async rewrites() {
+  //   return [
+  //     {
+  //       source: '/api/:path*',
+  //       destination: 'http://localhost:3001/api/:path*',
+  //     },
+  //   ];
+  // },
   webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

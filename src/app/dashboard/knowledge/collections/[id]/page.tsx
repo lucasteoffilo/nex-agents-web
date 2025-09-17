@@ -106,7 +106,7 @@ interface CollectionDetails {
   agentCount: number;
   tags: string[];
   isActive: boolean;
-  visibility: 'public' | 'private' | 'internal';
+  visibility: 'public' | 'private' | 'restricted';
   createdBy: {
     id: string;
     name: string;
@@ -141,7 +141,7 @@ const mockCollection: CollectionDetails = {
   agentCount: 3,
   tags: ['produtos', 'vendas', 'especificações'],
   isActive: true,
-  visibility: 'internal',
+  visibility: 'private',
   createdBy: {
     id: '1',
     name: 'Ana Silva',
@@ -349,7 +349,7 @@ export default function CollectionDetailsPage() {
           name: collectionData.name,
           description: collectionData.description || '',
           slug: collectionData.name.toLowerCase().replace(/\s+/g, '-'),
-          documentCount: collectionData.documentCount || documentsResponse.documents?.length || 0,
+          documentCount: collectionData.documentCount || documentsResponse.data?.documents?.length || 0,
           agentCount: 0, // TODO: implementar quando tiver endpoint de agentes
           tags: collectionData.metadata?.tags || [],
           isActive: collectionData.status === 'active',
@@ -379,7 +379,7 @@ export default function CollectionDetailsPage() {
         };
         
         setCollection(transformedCollection);
-        setDocuments(documentsResponse.documents || []);
+        setDocuments(documentsResponse.data?.documents || []);
         
       } catch (error) {
         console.error('Erro ao carregar dados da collection:', error);
@@ -578,7 +578,7 @@ export default function CollectionDetailsPage() {
                       // Recarregar documentos após upload
                       try {
                         const documentsResponse = await collectionService.getDocuments(collectionId);
-                        setDocuments(documentsResponse.documents || []);
+                        setDocuments(documentsResponse.data?.documents || []);
                         toast.success('Documentos carregados com sucesso!');
                       } catch (error) {
                         console.error('Erro ao recarregar documentos:', error);
@@ -929,7 +929,7 @@ export default function CollectionDetailsPage() {
               // Recarregar documentos após upload
               try {
                 const documentsResponse = await collectionService.getDocuments(collectionId);
-                setDocuments(documentsResponse.documents || []);
+                setDocuments(documentsResponse.data?.documents || []);
                 toast.success(`${uploadedDocuments.length} documento(s) enviado(s) com sucesso!`);
                 setIsAddDocumentDialogOpen(false);
               } catch (error) {

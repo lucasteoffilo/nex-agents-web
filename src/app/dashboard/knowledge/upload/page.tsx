@@ -622,7 +622,7 @@ export default function KnowledgeUploadPage() {
                         </div>
 
                         <div className="flex justify-end">
-                          <Button onClick={() => uploadFile(uploadFile)}>
+                          <Button onClick={() => simulateUpload(uploadFile)}>
                             <Upload className="h-4 w-4 mr-2" />
                             Enviar Arquivo
                           </Button>
