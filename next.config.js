@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Temporariamente desativado para resolver problemas com páginas dinâmicas
-  // output: 'export',
+  // Enable standalone output for Docker production builds
+  output: 'standalone',
+  // Disable experimental features that might interfere with CSS
+  experimental: {
+    appDir: true,
+  },
   // Configurações para ignorar erros de páginas dinâmicas
   skipTrailingSlashRedirect: true,
   skipMiddlewareUrlNormalize: true,
