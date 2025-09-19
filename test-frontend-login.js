@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // Configurar axios para usar cookies
 const api = axios.create({
-  baseURL: 'http://api.nexagentes.com/api',
+  baseURL: 'https://api.nexagentes.com/api',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
