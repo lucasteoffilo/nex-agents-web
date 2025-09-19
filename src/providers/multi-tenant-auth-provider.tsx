@@ -2,11 +2,11 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthContext, User, Tenant, Permission, UserRole } from '@/types';
-import apiService from '@/services/api';
-import tenantService from '@/services/tenant-service';
-import permissionService from '@/services/permission-service';
-import { redirectToDashboard } from '@/utils/navigation';
+import { AuthContext, User, Tenant, Permission, UserRole } from '../types';
+import apiService from '../services/api';
+import tenantService from '../services/tenant-service';
+import permissionService from '../services/permission-service';
+import { redirectToDashboard } from '../utils/navigation';
 
 interface MultiTenantAuthContextType extends AuthContext {
   // Estados de loading

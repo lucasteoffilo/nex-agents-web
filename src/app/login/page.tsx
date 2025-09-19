@@ -1,17 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMultiTenantAuth } from '../../providers/multi-tenant-auth-provider';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginPageContent() {
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+  
+  return <LoginForm />;
+}
+
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -21,19 +39,14 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-      toast.error('Por favor, preencha todos os campos');
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      setIsLoading(true);
       await login(email, password);
-      // O redirecionamento é feito no MultiTenantAuthProvider
+      toast.success('Login realizado com sucesso!');
     } catch (error: any) {
       console.error('Erro no login:', error);
-      toast.error(error.message || 'Erro ao fazer login');
+      toast.error(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setIsLoading(false);
     }
@@ -52,9 +65,9 @@ export default function LoginPage() {
               className="w-56 h-16"
             />
           </div>
-          {/* <CardTitle className="text-2xl font-bold text-center">NexAgents</CardTitle> */}
+          <CardTitle className="text-2xl font-bold text-center">Entrar</CardTitle>
           <CardDescription className="text-center">
-            Faça login para acessar sua conta
+            Acesse sua conta para continuar
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -67,8 +80,8 @@ export default function LoginPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -77,11 +90,12 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Sua senha"
+                  placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
                   required
+                  disabled={isLoading}
+                  className="pr-10"
                 />
                 <Button
                   type="button"
@@ -128,3 +142,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default LoginPageContent;

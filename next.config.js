@@ -31,8 +31,21 @@ const nextConfig = {
       net: false,
       tls: false,
     };
+    // Adicionando suporte a aliases do tsconfig.json
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+      '@/components': require('path').resolve(__dirname, 'src/components'),
+      '@/lib': require('path').resolve(__dirname, 'src/lib'),
+      '@/hooks': require('path').resolve(__dirname, 'src/hooks'),
+      '@/types': require('path').resolve(__dirname, 'src/types'),
+      '@/utils': require('path').resolve(__dirname, 'src/utils'),
+      '@/styles': require('path').resolve(__dirname, 'src/styles'),
+      '@/store': require('path').resolve(__dirname, 'src/store'),
+      '@/services': require('path').resolve(__dirname, 'src/services'),
+      '@/providers': require('path').resolve(__dirname, 'src/providers'),
+    };
     return config;
   },
 };
-
 module.exports = nextConfig;

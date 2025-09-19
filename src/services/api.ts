@@ -1,8 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { ApiResponse, PaginationParams } from '@/types';
+import { ApiResponse, PaginationParams } from '../types';
 import { TenantService } from './tenant-service';
 import { PermissionService } from './permission-service';
-import { AppError, ErrorCodes, ErrorResponse, isRetryableError, getFriendlyErrorMessage } from '@/types/error';
+import { AppError, ErrorCodes, ErrorResponse, isRetryableError, getFriendlyErrorMessage } from '../types/error';
 import { toast } from 'sonner';
 
 // Função auxiliar para tratar erros da API
