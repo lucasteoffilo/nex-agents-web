@@ -126,7 +126,7 @@ const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
 
 // Função auxiliar para manter compatibilidade com o código existente
 const legacyApiRequest = async (endpoint: string, options: RequestInit = {}) => {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://api.nexagentes.com/api';
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
