@@ -32,7 +32,7 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # Configurar comando para iniciar o servidor Next.js
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
 
 # Healthcheck para verificar se o servidor está rodando
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -f http://localhost:3000/ || exit 1
