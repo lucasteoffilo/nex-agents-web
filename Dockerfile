@@ -26,15 +26,18 @@ RUN apk add --no-cache curl
 # Copiar arquivos necessários para executar o Next.js
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/src ./src
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 
 # Configurar comando para iniciar o servidor Next.js
-EXPOSE 3000
+EXPOSE 80
+ENV PORT=80
 CMD ["node", "server.js"]
 
 # Healthcheck para verificar se o servidor está rodando
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -f http://localhost:3000/ || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 CMD curl -f http://localhost:80/ || exit 1
 
 # Fim do Dockerfile
