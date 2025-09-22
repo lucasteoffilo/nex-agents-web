@@ -149,7 +149,7 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
       }
       
       // Definir dados do usuário diretamente da resposta
-      console.log('Definindo estado do usuário...');
+      // console.log('Definindo estado do usuário...');
       setUser(response.user);
       if (response.tenant) {
         setTenant(response.tenant);
@@ -172,7 +172,7 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
       }
       
       // Forçar atualização do estado
-      console.log('Estado definido, aguardando atualização...');
+      // console.log('Estado definido, aguardando atualização...');
       
       // Salvar token nos cookies para o middleware com configuração mais robusta
       const cookieOptions = [
@@ -184,7 +184,7 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
       ].filter(Boolean).join('; ');
       
       document.cookie = cookieOptions;
-      console.log('Token salvo nos cookies:', response.accessToken.substring(0, 20) + '...');
+      // console.log('Token salvo nos cookies:', response.accessToken.substring(0, 20) + '...');
       
       // Salvar tenant ID nos cookies se disponível
       if (response.tenant) {
@@ -199,36 +199,36 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
         document.cookie = tenantCookieOptions;
       }
       
-      console.log('Login bem-sucedido, redirecionando para dashboard...');
-      console.log('Dados do usuário:', response.user);
-      console.log('Dados do tenant:', response.tenant);
-      console.log('Permissões:', response.permissions);
+      // console.log('Login bem-sucedido, redirecionando para dashboard...');
+      // console.log('Dados do usuário:', response.user);
+      // console.log('Dados do tenant:', response.tenant);
+      // console.log('Permissões:', response.permissions);
       
       // Verificar se estamos em uma página de debug
       const isDebugPage = window.location.pathname.includes('login-debug') || window.location.pathname.includes('debug-auth');
       
       if (isDebugPage) {
-        console.log('🔍 MODO DEBUG: Redirecionamento automático desabilitado');
-        console.log('=== DADOS DO LOGIN ===');
-        console.log('URL atual:', window.location.href);
-        console.log('Cookies atuais:', document.cookie);
-        console.log('LocalStorage:', {
-          nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
-          current_tenant_id: localStorage.getItem('current_tenant_id')
-        });
-        console.log('=== FIM DOS DADOS ===');
+        // console.log('🔍 MODO DEBUG: Redirecionamento automático desabilitado');
+        // console.log('=== DADOS DO LOGIN ===');
+        // console.log('URL atual:', window.location.href);
+        // console.log('Cookies atuais:', document.cookie);
+        // console.log('LocalStorage:', {
+        //   nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
+        //   current_tenant_id: localStorage.getItem('current_tenant_id')
+        // });
+        // console.log('=== FIM DOS DADOS ===');
         return; // Não redirecionar em modo debug
       }
       
       // Aguardar mais tempo para debug e garantir que os cookies sejam definidos
       setTimeout(() => {
-        console.log('=== INICIANDO REDIRECIONAMENTO ===');
-        console.log('URL atual:', window.location.href);
-        console.log('Cookies atuais:', document.cookie);
-        console.log('LocalStorage:', {
-          nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
-          current_tenant_id: localStorage.getItem('current_tenant_id')
-        });
+        // console.log('=== INICIANDO REDIRECIONAMENTO ===');
+        // console.log('URL atual:', window.location.href);
+        // console.log('Cookies atuais:', document.cookie);
+        // console.log('LocalStorage:', {
+        //   nex_token: localStorage.getItem('nex_token')?.substring(0, 20) + '...',
+        //   current_tenant_id: localStorage.getItem('current_tenant_id')
+        // });
         
         // Usar função de redirecionamento segura
         console.log('Redirecionando para /dashboard...');
@@ -313,24 +313,55 @@ export function MultiTenantAuthProvider({ children }: { children: React.ReactNod
       ]);
       
       if (profileResponse.success && profileResponse.data) {
-        setUser(profileResponse.data.user);
-        setTenant(profileResponse.data.tenant);
+        // Extrair dados do usuário da resposta
+        const userData = profileResponse.data;
         
-        // Carregar permissões do usuário apenas se temos user e tenant
-        if (profileResponse.data.user && profileResponse.data.tenant) {
-          const permissionsResponse = await permissionService.getUserPermissions(
-            profileResponse.data.user.id,
-            profileResponse.data.tenant.id
-          );
+        // Extrair tenant do userTenants (assume que o primeiro é o principal)
+        const primaryUserTenant = userData.userTenants?.[0];
+        const tenantData = primaryUserTenant?.tenant;
+        const roleData = primaryUserTenant?.role;
+        
+        // Definir dados do usuário com role incluído
+        setUser({
+          ...userData,
+          role: roleData ? {
+            id: roleData.id,
+            name: roleData.name,
+            slug: roleData.slug,
+            level: roleData.level || 'user', // Fallback para 'user' se level não estiver definido
+            description: roleData.description
+          } : undefined
+        });
+        
+        if (tenantData) {
+          setTenant(tenantData);
           
-          if (permissionsResponse.success && permissionsResponse.data) {
-            setPermissions(permissionsResponse.data.permissions);
-          }
-          
-          // Carregar caminho do tenant
-          const pathResponse = await tenantService.getTenantPath(profileResponse.data.tenant.id);
-          if (pathResponse.success && pathResponse.data) {
-            setCurrentTenantPath(pathResponse.data.map(t => t.id));
+          // Carregar permissões do usuário apenas se temos user e tenant
+          if (userData.id && tenantData.id) {
+            // TODO: Verificar se esta chamada é necessária - removida para evitar erro 404
+            // As permissões já devem estar disponíveis através do contexto do tenant/role
+            console.log('Skipping permission load - permissions should be available through tenant/role context');
+            /*
+            const permissionsResponse = await permissionService.getUserPermissions(
+              userData.id,
+              tenantData.id
+            );
+            
+            if (permissionsResponse.success && permissionsResponse.data) {
+              setPermissions(permissionsResponse.data.permissions);
+            }
+            */
+            
+            // Carregar caminho do tenant
+            // TODO: Verificar se esta chamada é necessária - removida para evitar erro 404
+            // O caminho do tenant pode não ser essencial para o funcionamento básico
+            console.log('Skipping tenant path load - may not be essential for basic functionality');
+            /*
+            const pathResponse = await tenantService.getTenantPath(tenantData.id);
+            if (pathResponse.success && pathResponse.data) {
+              setCurrentTenantPath(pathResponse.data.map(t => t.id));
+            }
+            */
           }
         }
       }
@@ -454,6 +485,7 @@ export function useMultiTenantAuth() {
 // Hook para verificar permissões
 export function usePermissions() {
   const { hasPermission, permissions, user } = useMultiTenantAuth();
+  console.log("user,useruseruseruseruseruseruseruser", user);
   
   return {
     hasPermission,

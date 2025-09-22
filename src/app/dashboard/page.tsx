@@ -228,6 +228,14 @@ export default function DashboardPage() {
   const [debugInfo, setDebugInfo] = useState({ cookies: '', localStorage: '' });
 
   useEffect(() => {
+    // Debug: verificar dados do auth provider
+    console.log('=== DADOS DO AUTH PROVIDER ===');
+    console.log('User:', user);
+    console.log('Tenant:', tenant);
+    console.log('Auth Loading:', authLoading);
+    console.log('Auth Initialized:', isInitialized);
+    console.log('=============================');
+
     // Capturar informações de debug
     if (typeof window !== 'undefined') {
       setDebugInfo({
@@ -250,7 +258,7 @@ export default function DashboardPage() {
       clearTimeout(timer);
       clearInterval(timeInterval);
     };
-  }, []);
+  }, [user, tenant, authLoading, isInitialized]);
 
   if (isLoading) {
     return (
@@ -277,10 +285,10 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Olá, {user?.name?.split(' ')[0] || 'Usuário'}! 👋
+            Olá, {user?.firstName || user?.name?.split(' ')[0] || 'Usuário'}! 👋
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Aqui está um resumo da sua plataforma hoje.
+            {tenant ? `Bem-vindo ao ${tenant.name}` : 'Aqui está um resumo da sua plataforma hoje.'}
           </p>
         </div>
         <div className="flex space-x-3">

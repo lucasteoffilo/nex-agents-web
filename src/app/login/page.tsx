@@ -53,27 +53,40 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4 relative overflow-hidden">
+      {/* Background elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10"></div>
+      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse animation-delay-2000"></div>
+      
+      <Card className="w-full max-w-md bg-white/95 backdrop-blur-md border-0 shadow-2xl relative z-10">
+        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center p-2 border border-gray-200">
             <Image
-              src="/nex-logo.png"
+              src="/nex-n.png"
               alt="NEX Platform Logo"
               width={48}
               height={48}
-              className="w-56 h-16"
+              className="w-10 h-10 object-contain"
             />
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Entrar</CardTitle>
-          <CardDescription className="text-center">
+        </div>
+        
+        <CardHeader className="space-y-1 pt-14 pb-4">
+          <CardTitle className="text-2xl font-bold text-center text-gray-900">
+            Bem-vindo
+          </CardTitle>
+          <CardDescription className="text-center text-gray-600 text-sm">
             Acesse sua conta para continuar
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+        
+        <CardContent className="pb-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -82,10 +95,14 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
+                className="h-12 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+            
+            <div className="space-y-3">
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                Senha
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -95,50 +112,63 @@ function LoginForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="pr-10"
+                  className="h-12 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 pr-12"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-1 top-1 h-10 w-10 p-0 hover:bg-gray-100"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-5 w-5 text-gray-400" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-5 w-5 text-gray-400" />
                   )}
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            
+            <Button 
+              type="submit" 
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Entrando...
                 </>
               ) : (
-                'Entrar'
+                <>
+                  <span className="mr-2">→</span>
+                  Entrar
+                </>
               )}
             </Button>
           </form>
           
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Não tem uma conta?{' '}
-              <Button
-                variant="link"
-                className="p-0 h-auto font-normal"
-                onClick={() => router.push('/register')}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-center text-sm text-gray-600">
+              Precisa de ajuda?{' '}
+              <button 
+                type="button" 
+                className="text-blue-600 hover:text-blue-700 font-medium underline-offset-2 hover:underline transition-colors"
+                onClick={() => toast.info('Entre em contato com o suporte')}
               >
-                Criar conta de administrador
-              </Button>
+                Contate o suporte
+              </button>
             </p>
           </div>
         </CardContent>
       </Card>
+      
+      {/* Footer */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center text-white/60 text-xs">
+        © 2024 Nex Agentes. Todos os direitos reservados.
+      </div>
     </div>
   );
 }

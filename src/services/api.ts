@@ -91,8 +91,10 @@ const workerApi: AxiosInstance = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('nex_token');
+    // console.log('Token encontrado no localStorage:', token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // console.log('Authorization header adicionado:', config.headers.Authorization);
     }
     
     // Adicionar tenant ID se disponível
@@ -101,13 +103,16 @@ api.interceptors.request.use(
       const tenantCookie = cookies.find(cookie => cookie.trim().startsWith('current_tenant='));
       if (tenantCookie) {
         config.headers['X-Tenant-ID'] = tenantCookie.split('=')[1];
+        // console.log('X-Tenant-ID do cookie:', config.headers['X-Tenant-ID']);
       } else {
         const currentTenant = localStorage.getItem('current_tenant_id');
         if (currentTenant) {
           config.headers['X-Tenant-ID'] = currentTenant;
+          // console.log('X-Tenant-ID do localStorage:', config.headers['X-Tenant-ID']);
         }
       }
     }
+    // console.log('Headers finais da requisição:', config.headers);
     return config;
   },
   (error) => {

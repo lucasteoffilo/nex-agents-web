@@ -1,6 +1,7 @@
 // Tipos de usuário e autenticação
 export interface User {
   id: string;
+  firstName: string;
   email: string;
   name: string;
   avatar?: string;
