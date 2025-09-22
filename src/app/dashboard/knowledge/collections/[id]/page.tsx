@@ -411,8 +411,9 @@ export default function CollectionDetailsPage() {
   // Transformar documentos da API para o formato esperado
   const transformedDocuments = documents.map(doc => ({
     id: doc.id,
-    title: doc.originalName || doc.filename,
-    description: doc.metadata?.extractedText?.substring(0, 100) + '...' || 'Sem descrição',
+    title: doc.title  || 'Documento sem nome',
+    // title: doc.originalName || doc.filename  || 'Documento sem nome',
+    description: doc.metadata?.extractedText?.substring(0, 100) == undefined ? 'Sem descrição' : doc.metadata?.extractedText?.substring(0, 100) + '...',
     fileName: doc.filename,
     fileSize: doc.fileSize,
     mimeType: doc.type === 'pdf' ? 'application/pdf' : 

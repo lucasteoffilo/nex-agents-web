@@ -34,6 +34,7 @@ export interface Collection {
 
 export interface Document {
   id: string;
+  title: string;
   filename: string;
   originalName: string;
   type: 'image' | 'html' | 'pdf' | 'doc' | 'docx' | 'txt' | 'md' | 'csv' | 'xlsx' | 'pptx' | 'xml' | 'json' | 'other';

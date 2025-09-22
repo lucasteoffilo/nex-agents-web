@@ -47,22 +47,22 @@ const sidebarItems: SidebarItem[] = [
     href: '/dashboard',
     icon: LayoutDashboard,
   },
-  {
-    title: 'Chat',
-    href: '/dashboard/chat',
-    icon: MessageSquare,
-    badge: '3',
-  },
+  // {
+  //   title: 'Chat',
+  //   href: '/dashboard/chat',
+  //   icon: MessageSquare,
+  //   badge: '3',
+  // },
   {
     title: 'Conhecimento',
-    href: '/dashboard/knowledge',
+    href: '/dashboard/knowledge/collections',
     icon: BookCopy,
-    children: [
-      {
-        title: 'Coleção',
-        href: '/dashboard/knowledge/collections',
-        icon: FolderOpen,
-      },
+    // children: [
+      // {
+      //   title: 'Coleção',
+      //   href: '/dashboard/knowledge/collections',
+      //   icon: FolderOpen,
+      // },
       // {
       //   title: 'Documentos',
       //   href: '/dashboard/knowledge/documents',
@@ -73,7 +73,7 @@ const sidebarItems: SidebarItem[] = [
       //   href: '/dashboard/knowledge/upload',
       //   icon: FileText,
       // },
-    ],
+    // ],
   },
   // {
   //   title: 'Atendimento',
@@ -105,33 +105,33 @@ const sidebarItems: SidebarItem[] = [
     //   },
     // ],
   },
-  {
-    title: 'CRM',
-    href: '/dashboard/crm',
-    icon: Users,
-    children: [
-      {
-        title: 'Contatos',
-        href: '/dashboard/crm/contacts',
-        icon: Users,
-      },
-      {
-        title: 'Deals',
-        href: '/dashboard/crm/deals',
-        icon: Users,
-      },
-    ],
-  },
-  {
-    title: 'Analytics',
-    href: '/dashboard/analytics',
-    icon: BarChart3,
-  },
-  {
-    title: 'Configurações',
-    href: '/dashboard/settings',
-    icon: Settings,
-  },
+  // {
+  //   title: 'CRM',
+  //   href: '/dashboard/crm',
+  //   icon: Users,
+  //   children: [
+  //     {
+  //       title: 'Contatos',
+  //       href: '/dashboard/crm/contacts',
+  //       icon: Users,
+  //     },
+  //     {
+  //       title: 'Deals',
+  //       href: '/dashboard/crm/deals',
+  //       icon: Users,
+  //     },
+  //   ],
+  // },
+  // {
+  //   title: 'Analytics',
+  //   href: '/dashboard/analytics',
+  //   icon: BarChart3,
+  // },
+  // {
+  //   title: 'Configurações',
+  //   href: '/dashboard/settings',
+  //   icon: Settings,
+  // },
 ];
 
 interface DashboardLayoutProps {
