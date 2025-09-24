@@ -4,7 +4,7 @@ const nextConfig = {
   output: 'standalone',
   // Disable experimental features that might interfere with CSS
   experimental: {
-    appDir: true,
+    // appDir is no longer needed in newer Next.js versions
   },
   // Configurações para ignorar erros de páginas dinâmicas
   skipTrailingSlashRedirect: true,

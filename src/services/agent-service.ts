@@ -436,7 +436,7 @@ export class AgentService {
     type?: string;
     isActive?: boolean;
     collectionId?: string; // Adicionado para filtrar agentes por coleção
-    avatar: string;
+    avatar?: string;  // ← Corrigido: agora é opcional
   }): Promise<ApiResponse<{
     agents: Agent[];
     total: number;

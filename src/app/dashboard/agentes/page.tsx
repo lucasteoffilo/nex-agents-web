@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -114,8 +114,6 @@ interface Agent {
   version: string;
 }
 
-
-
 // Funções auxiliares para ícones
 const getTypeIcon = (type: string) => {
   switch (type) {
@@ -181,8 +179,10 @@ const getTypeName = (type: string) => {
   }
 };
 
-export default function AgentesPage() {
+// Componente principal que usa useSearchParams
+function AgentesContent() {
   const router = useRouter();
+  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
   const collectionId = searchParams.get('collectionId');
   const {
@@ -589,5 +589,19 @@ export default function AgentesPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+// Componente principal com suspense boundary
+export default function AgentesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando...</span>
+      </div>
+    }>
+      <AgentesContent />
+    </Suspense>
   );
 }
