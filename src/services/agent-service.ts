@@ -3,14 +3,14 @@ import apiService from './api';
 
 // Tipos específicos para agentes
 export interface Agent {
+  conversations: any;
   id: string;
   avatar?: string;
   name: string;
   description?: string;
   status: 'active' | 'inactive' | 'training' | 'error';
   type: 'assistant' | 'chatbot' | 'support' | 'sales' | 'custom';
-  prompt: string;
-  systemPrompt?: string;
+  systemPrompt: string;
   instructions?: string;
   model?: string;
   temperature?: number;
@@ -406,7 +406,7 @@ export interface CreateAgentDto {
   name: string;
   description?: string;
   type: 'assistant' | 'chatbot' | 'support' | 'sales' | 'custom';
-  prompt: string;
+  systemPrompt: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;

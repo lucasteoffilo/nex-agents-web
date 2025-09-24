@@ -23,7 +23,7 @@ interface AgentFormData {
   name: string;
   description: string;
   type: 'assistant' | 'chatbot' | 'support' | 'sales' | 'custom';
-  prompt: string;
+  systemPrompt: string;
   model: string;
   temperature: number;
   maxTokens: number;
@@ -44,7 +44,7 @@ const initialFormData: AgentFormData = {
   name: '',
   description: '',
   type: 'assistant',
-  prompt: '',
+  systemPrompt: '',
   model: 'gpt-3.5-turbo',
   temperature: 0.7,
   maxTokens: 1000,
@@ -155,8 +155,8 @@ export default function CriarAgentePage() {
       return;
     }
     
-    if (!formData.prompt.trim()) {
-      toast.error('Prompt do agente é obrigatório');
+    if (!formData.systemPrompt.trim()) {
+              toast.error('Prompt do sistema é obrigatório');
       return;
     }
 
@@ -167,7 +167,7 @@ export default function CriarAgentePage() {
         name: formData.name,
         description: formData.description,
         type: formData.type,
-        prompt: formData.prompt,
+        systemPrompt: formData.systemPrompt,
         model: formData.model,
         temperature: formData.temperature,
         maxTokens: formData.maxTokens,
@@ -366,21 +366,21 @@ export default function CriarAgentePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="prompt">
-                Instruções do Agente
+              <Label htmlFor="systemPrompt">
+            Prompt do Sistema
                 <span className="text-red-500 ml-1">*</span>
               </Label>
               <Textarea
-                id="prompt"
-                value={formData.prompt}
-                onChange={(e) => handleInputChange('prompt', e.target.value)}
+                id="systemPrompt"
+                value={formData.systemPrompt}
+                onChange={(e) => handleInputChange('systemPrompt', e.target.value)}
                 placeholder="Você é um assistente especializado em... Sempre seja educado e profissional..."
                 maxLength={2000}
                 rows={6}
                 required
               />
               <div className="text-xs text-muted-foreground">
-                {formData.prompt.length}/2000 caracteres
+                {formData.systemPrompt.length}/2000 caracteres
               </div>
             </div>
           </CardContent>

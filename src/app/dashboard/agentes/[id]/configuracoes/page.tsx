@@ -188,9 +188,9 @@ export default function AgentConfigPage() {
           };
         }
         
-        // Prompt é obrigatório no DTO
+        // Prompt do Sistema é obrigatório no DTO
         if (configChanges.modelo.systemPrompt) {
-          updateData.prompt = configChanges.modelo.systemPrompt;
+          updateData.systemPrompt = configChanges.modelo.systemPrompt;
         }
         
         // Personality é opcional no DTO
@@ -207,38 +207,36 @@ export default function AgentConfigPage() {
       }
       
       // Prompt/Instructions (opcional)
-      if (configChanges.prompt) {
-        if (configChanges.prompt.systemInstructions) {
-          updateData.instructions = configChanges.prompt.systemInstructions;
-        }
-        
-        // Settings é opcional no DTO
-        const settingsUpdate: any = {};
-        if (configChanges.prompt.welcomeMessage) settingsUpdate.welcomeMessage = configChanges.prompt.welcomeMessage;
-        if (configChanges.prompt.fallbackMessage) settingsUpdate.fallbackMessage = configChanges.prompt.fallbackMessage;
-        if (configChanges.prompt.errorMessage) settingsUpdate.errorMessage = configChanges.prompt.errorMessage;
-        if (configChanges.prompt.endConversationMessage) settingsUpdate.endConversationMessage = configChanges.prompt.endConversationMessage;
-        if (configChanges.prompt.escalationPrompt) settingsUpdate.escalationPrompt = configChanges.prompt.escalationPrompt;
-        if (configChanges.prompt.contextualPrompts) settingsUpdate.contextualPrompts = configChanges.prompt.contextualPrompts;
-        if (configChanges.prompt.responseTemplates) settingsUpdate.responseTemplates = configChanges.prompt.responseTemplates;
-        if (configChanges.prompt.enablePersonalization !== undefined) settingsUpdate.enablePersonalization = configChanges.prompt.enablePersonalization;
-        if (configChanges.prompt.language) settingsUpdate.language = configChanges.prompt.language;
-        
-        if (Object.keys(settingsUpdate).length > 0) {
-          updateData.settings = {
-            ...agent.settings,
-            ...settingsUpdate
-          };
-        }
-        
-        // Personality tone
-        if (configChanges.prompt.tone) {
-          updateData.personality = {
-            ...updateData.personality,
-            ...agent.personality,
-            tone: configChanges.prompt.tone
-          };
-        }
+      if (configChanges.prompt?.systemInstructions) {
+        updateData.instructions = configChanges.prompt.systemInstructions;
+      }
+      
+      // Settings é opcional no DTO
+      const settingsUpdate: any = {};
+      if (configChanges.prompt?.welcomeMessage) settingsUpdate.welcomeMessage = configChanges.prompt.welcomeMessage;
+      if (configChanges.prompt?.fallbackMessage) settingsUpdate.fallbackMessage = configChanges.prompt.fallbackMessage;
+      if (configChanges.prompt?.errorMessage) settingsUpdate.errorMessage = configChanges.prompt.errorMessage;
+      if (configChanges.prompt?.endConversationMessage) settingsUpdate.endConversationMessage = configChanges.prompt.endConversationMessage;
+      if (configChanges.prompt?.escalationPrompt) settingsUpdate.escalationPrompt = configChanges.prompt.escalationPrompt;
+      if (configChanges.prompt?.contextualPrompts) settingsUpdate.contextualPrompts = configChanges.prompt.contextualPrompts;
+      if (configChanges.prompt?.responseTemplates) settingsUpdate.responseTemplates = configChanges.prompt.responseTemplates;
+      if (configChanges.prompt?.enablePersonalization !== undefined) settingsUpdate.enablePersonalization = configChanges.prompt.enablePersonalization;
+      if (configChanges.prompt?.language) settingsUpdate.language = configChanges.prompt.language;
+      
+      if (Object.keys(settingsUpdate).length > 0) {
+        updateData.settings = {
+          ...agent.settings,
+          ...settingsUpdate
+        };
+      }
+      
+      // Personality tone
+      if (configChanges.prompt?.tone) {
+        updateData.personality = {
+          ...updateData.personality,
+          ...agent.personality,
+          tone: configChanges.prompt.tone
+        };
       }
       
       // Knowledge Base (opcional)
