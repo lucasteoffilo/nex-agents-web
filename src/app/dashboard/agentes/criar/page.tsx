@@ -174,6 +174,10 @@ export default function CriarAgentePage() {
         capabilities: formData.capabilities,
         knowledgeBase: formData.knowledgeCollections.length > 0 ? {
           collections: formData.knowledgeCollections,
+          selectedCollections: formData.knowledgeCollections,
+          availableCollections: collections.filter(col => 
+            formData.knowledgeCollections.includes(col.id)
+          ).map(col => col.id),
           searchSettings: {
             similarity: 0.8,
             maxResults: 5,
