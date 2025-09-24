@@ -3,6 +3,7 @@ import apiService from './api';
 
 // Tipos específicos para chat
 export interface Message {
+  role: string;
   id: string;
   chatId: string;
   content: string;

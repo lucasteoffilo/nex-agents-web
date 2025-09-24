@@ -122,6 +122,7 @@ export default function AgentChatPage() {
 
     setIsSending(true);
     const tempUserMessage: Message = {
+      role: 'user',
       id: `temp-${Date.now()}`,
       chatId: chat.id,
       content: 'Enviando áudio...', // Placeholder
@@ -154,8 +155,8 @@ export default function AgentChatPage() {
         chatId: chat.id,
         content: 'Resposta em áudio',
         type: 'assistant',
-        timestamp: new Date().toISOString()
-        // audioUrl: audioUrl, // Removido pois não existe no tipo Message
+        timestamp: new Date().toISOString(),
+        role: 'assistant',
       };
       setMessages((prev) => [...prev, tempAssistantMessage]);
 
@@ -200,6 +201,7 @@ export default function AgentChatPage() {
       
       // Adicionar mensagem do usuário à interface imediatamente
       const tempUserMessage: Message = {
+        role: 'user',
         id: `temp-${Date.now()}`,
         chatId: chat.id,
         content: userMessage,
@@ -243,7 +245,11 @@ export default function AgentChatPage() {
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center space-x-3">
           <div className="h-10 w-10 rounded-full bg-brand-500 flex items-center justify-center text-white">
-            <Bot className="h-5 w-5" />
+            {agent?.avatar ? (
+              <img src={agent.avatar} alt={agent.name} className="h-10 w-10 rounded-full" />
+            ) : (
+              <Bot className="h-5 w-5" />
+            )}
           </div>
           <div>
             <h2 className="font-semibold text-base">
@@ -276,7 +282,11 @@ export default function AgentChatPage() {
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="h-20 w-20 rounded-full bg-brand-500 flex items-center justify-center text-white mb-5">
-              <Bot className="h-10 w-10" />
+              {agent?.avatar ? (
+                <img src={agent.avatar} alt={agent.name} className="h-20 w-20 rounded-full" />
+              ) : (
+                <Bot className="h-10 w-10" />
+              )}
             </div>
             <h3 className="text-xl font-semibold">{agent?.name || 'Agente'}</h3>
             <p className="text-muted-foreground text-base max-w-md mt-3">
@@ -292,7 +302,7 @@ export default function AgentChatPage() {
           <>
             {messages.map((message, index) => {
               // const isUser = message.type === 'user';
-              const isUser = message.type === 'user';
+              const isUser = (message.type === 'user' || message.role === 'user');
               return (
                 <div 
                   key={message.id} 
@@ -306,7 +316,11 @@ export default function AgentChatPage() {
                         </div>
                       ) : (
                         <div className="h-8 w-8 rounded-full bg-brand-500 flex items-center justify-center text-white">
-                          <Bot className="h-4 w-4" />
+                          {agent?.avatar ? (
+                            <img src={agent.avatar} alt={agent.name} className="h-8 w-8 rounded-full" />
+                          ) : (
+                            <Bot className="h-4 w-4" />
+                          )}
                         </div>
                       )}
                     </div>
@@ -337,9 +351,9 @@ export default function AgentChatPage() {
                         })}`;
                       })()}
                     </div>
-                    {/* message.audioUrl && (
+                    {/* {message.audioUrl && (
                       <audio controls autoPlay={message.type === 'assistant'} src={message.audioUrl} className="mt-2 w-full"></audio>
-                    ) */}
+                    )} */}
                     </Card>
                   </div>
                 </div>
@@ -375,14 +389,14 @@ export default function AgentChatPage() {
             className="flex-1 h-12 text-base"
             disabled={isLoading || isSending || !chat || isRecording}
           />
-          <Button
+          {/* <Button
             onClick={isRecording ? stopRecording : startRecording}
             size="icon"
             className={`h-12 w-12 rounded-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-500 hover:bg-gray-600'}`}
             disabled={isLoading || isSending || !chat}
           >
             <Mic className="h-6 w-6" />
-          </Button>
+          </Button> */}
           <Button 
             onClick={handleSendMessage} 
             size="icon" 

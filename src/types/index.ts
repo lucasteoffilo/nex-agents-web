@@ -421,9 +421,22 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-  filters?: Record<string, any>;
+  orderBy?: string;
+  sort?: 'asc' | 'desc';
+  collectionId?: string; // Adicionado para filtrar agentes por coleção
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+  };
 }
 
 // Tipos de notificações

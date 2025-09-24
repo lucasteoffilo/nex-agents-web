@@ -4,6 +4,7 @@ import apiService from './api';
 // Tipos específicos para agentes
 export interface Agent {
   id: string;
+  avatar?: string;
   name: string;
   description?: string;
   status: 'active' | 'inactive' | 'training' | 'error';
@@ -434,6 +435,8 @@ export class AgentService {
   async getAgents(params?: PaginationParams & {
     type?: string;
     isActive?: boolean;
+    collectionId?: string; // Adicionado para filtrar agentes por coleção
+    avatar: string;
   }): Promise<ApiResponse<{
     agents: Agent[];
     total: number;

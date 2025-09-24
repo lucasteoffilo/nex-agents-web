@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
@@ -100,9 +100,17 @@ interface Agent {
   conversations: number;
   successRate: number;
   avgResponseTime: number;
-  knowledgeBaseCollectionIds: string[];
+  knowledgeBase?: {
+    collections?: string[];
+  };
+  metrics?: {
+    totalConversations?: number;
+    successRate?: number;
+    averageResponseTime?: number;
+  };
   flows: number;
   lastTrained?: string;
+  lastTrainedAt?: string;
   version: string;
 }
 
@@ -175,6 +183,8 @@ const getTypeName = (type: string) => {
 
 export default function AgentesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const collectionId = searchParams.get('collectionId');
   const {
     agents,
     stats,
@@ -218,8 +228,13 @@ export default function AgentesPage() {
     const matchesStatus = selectedStatus === 'all' || agent.status === selectedStatus;
     
     const matchesType = selectedType === 'all' || agent.type === selectedType;
+
+    const matchesCollection = !collectionId ||
+      (agent.knowledgeBase &&
+        agent.knowledgeBase.collections &&
+        agent.knowledgeBase.collections.includes(collectionId));
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesCollection;
   });
 
   // Calcular estatísticas a partir dos dados dos agentes filtrados
