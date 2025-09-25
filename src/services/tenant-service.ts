@@ -37,6 +37,11 @@ class TenantService {
     return apiService.get(endpoint, params);
   }
 
+  // Método para obter todos os tenants (apenas para administradores)
+  async getAllTenants(params?: PaginationParams): Promise<ApiResponse<Tenant[]>> {
+    return apiService.get('/tenants/hierarchy', params);
+  }
+
   async getSubTenants(parentTenantId: string, params?: PaginationParams): Promise<ApiResponse<Tenant[]>> {
     return apiService.get(`/tenants/${parentTenantId}/sub-tenants`, params);
   }

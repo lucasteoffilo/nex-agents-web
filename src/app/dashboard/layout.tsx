@@ -54,6 +54,11 @@ const sidebarItems: SidebarItem[] = [
   //   badge: '3',
   // },
   {
+    title: 'Clientes',
+    href: '/dashboard/customers',
+    icon: Users,
+  },
+  {
     title: 'Conhecimento',
     href: '/dashboard/knowledge/collections',
     icon: BookCopy,
