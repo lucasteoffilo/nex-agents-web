@@ -214,7 +214,7 @@ export default function ContactsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Score Médio</p>
-                <p className="text-2xl font-bold">{stats?.avgScore?.toFixed(0) || 0}</p>
+                <p className="text-2xl font-bold">{stats?.avgLeadScore?.toFixed(0) || 0}</p>
               </div>
               <Star className="h-8 w-8 text-yellow-500" />
             </div>
@@ -351,9 +351,9 @@ export default function ContactsPage() {
                             {contact.type === 'vendor' && 'Fornecedor'}
                             {contact.type === 'other' && 'Outro'}
                           </Badge>
-                          {contact.score && (
-                            <span className={`text-sm font-medium ${getScoreColor(contact.score)}`}>
-                              {contact.score}
+                          {contact.leadScore && (
+                            <span className={`text-sm font-medium ${getScoreColor(contact.leadScore)}`}>
+                              {contact.leadScore}
                             </span>
                           )}
                         </div>
@@ -428,7 +428,7 @@ export default function ContactsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => setPage(Math.max(page - 1, 1))}
                   disabled={page === 1}
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
@@ -452,7 +452,7 @@ export default function ContactsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => setPage(Math.min(page + 1, totalPages))}
                   disabled={page === totalPages}
                 >
                   Próximo

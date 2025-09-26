@@ -75,8 +75,8 @@ export function useContacts(options: UseContactsOptions = {}): UseContactsReturn
   // State
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(initialPagination.page);
-  const [limit, setLimit] = useState(initialPagination.limit);
+  const [page, setPage] = useState<number>(initialPagination.page ?? 1);
+  const [limit, setLimit] = useState<number>(initialPagination.limit ?? 10);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -439,14 +439,14 @@ export function useContacts(options: UseContactsOptions = {}): UseContactsReturn
 
   // Pagination helpers
   const nextPage = useCallback(() => {
-    if (page < totalPages) {
-      setPage(page + 1);
+    if ((page ?? 1) < (totalPages ?? 1)) {
+      setPage((page ?? 1) + 1);
     }
   }, [page, totalPages]);
 
   const prevPage = useCallback(() => {
-    if (page > 1) {
-      setPage(page - 1);
+    if ((page ?? 1) > 1) {
+      setPage((page ?? 1) - 1);
     }
   }, [page]);
 

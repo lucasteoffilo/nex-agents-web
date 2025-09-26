@@ -199,7 +199,7 @@ export default function CRMDashboard() {
               <div className="pt-4 border-t">
                 <div className="flex items-center justify-between text-sm">
                   <span>Score médio</span>
-                  <span className="font-semibold">{stats?.avgScore?.toFixed(0) || 0}</span>
+                  <span className="font-semibold">{stats?.avgLeadScore?.toFixed(0) || 0}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span>Atribuídos</span>

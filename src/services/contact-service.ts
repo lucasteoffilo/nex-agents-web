@@ -153,7 +153,7 @@ class ContactService {
 
   // Remover tags do contato
   async removeTags(contactId: string, tags: string[]): Promise<ApiResponse<Contact>> {
-    return apiService.delete(`/contacts/${contactId}/tags`, { tags });
+    return apiService.delete(`/contacts/${contactId}/tags`, { data: { tags } });
   }
 
   // Adicionar nota ao contato
@@ -250,7 +250,7 @@ class ContactService {
       error: string;
     }>;
   }>> {
-    return apiService.delete('/contacts/bulk-delete', { contactIds });
+    return apiService.delete('/contacts/bulk-delete', { data: { contactIds } });
   }
 }
 

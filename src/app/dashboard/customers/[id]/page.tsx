@@ -247,10 +247,10 @@ export default function CustomerDetailPage() {
                 </div>
               </div>
               
-              {customer.description && (
+              {(customer as any).description && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Descrição</label>
-                  <p className="text-sm mt-1">{customer.description}</p>
+                  <p className="text-sm mt-1">{(customer as any).description}</p>
                 </div>
               )}
             </CardContent>
@@ -346,7 +346,7 @@ export default function CustomerDetailPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => setSubCustomersPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() => setSubCustomersPage(Math.max(subCustomersPage - 1, 1))}
                           disabled={subCustomersPage === 1}
                         >
                           Anterior
@@ -354,7 +354,7 @@ export default function CustomerDetailPage() {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => setSubCustomersPage(prev => Math.min(prev + 1, subCustomersTotalPages))}
+                          onClick={() => setSubCustomersPage(Math.min(subCustomersPage + 1, subCustomersTotalPages))}
                           disabled={subCustomersPage === subCustomersTotalPages}
                         >
                           Próximo

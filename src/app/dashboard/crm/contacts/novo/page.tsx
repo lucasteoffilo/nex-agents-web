@@ -46,21 +46,22 @@ export default function NovoContatoPage() {
   });
 
   const handleInputChange = (field: string, value: any) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
+    if (field.startsWith('address.')) {
+      const child = field.split('.')[1] as keyof typeof formData.address;
       setFormData(prev => ({
         ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
+        address: {
+          ...prev.address,
           [child]: value
         }
       }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      return;
     }
+
+    setFormData(prev => ({
+      ...prev,
+      [field as keyof typeof prev]: value
+    }));
   };
 
   const handleAddTag = () => {

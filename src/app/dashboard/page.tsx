@@ -129,7 +129,7 @@ export default function DashboardPage() {
   // Hooks para dados reais
   const { agents, stats: agentStats, loading: agentsLoading } = useAgents({ autoFetch: true });
   const { tenants, loading: tenantsLoading } = useTenants();
-  const { chats, loading: chatsLoading } = useChats();
+  const { chats, isLoading: chatsLoading } = useChats();
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [debugInfo, setDebugInfo] = useState({ cookies: '', localStorage: '' });
@@ -139,7 +139,7 @@ export default function DashboardPage() {
     conversations: {
       total: chats?.length || 0,
       active: chats?.filter(chat => chat.status === 'active').length || 0,
-      resolved: chats?.filter(chat => chat.status === 'resolved').length || 0,
+      resolved: chats?.filter(chat => chat.status === 'closed').length || 0,
     },
     agents: {
       total: agents?.length || 0,
@@ -153,14 +153,14 @@ export default function DashboardPage() {
       inactive: tenants?.filter(tenant => (tenant as any).status !== 'active' && !tenant.isActive).length || 0,
     },
     satisfaction: {
-      score: agentStats?.avgSatisfaction || 0,
-      total: agentStats?.totalConversations || 0,
+      score: 0,
+      total: 0,
     },
     responseTime: {
-      average: agentStats?.avgResponseTime || 0,
+      average: 0,
     },
     resolutionRate: {
-      rate: agentStats?.resolutionRate || 0,
+      rate: 0,
     },
   };
 
@@ -453,10 +453,10 @@ export default function DashboardPage() {
                       </Badge>
                       <div className="text-right">
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {agent.metrics?.avgSatisfaction?.toFixed(1) || '0.0'}/5.0
+                          {agent.metrics?.satisfactionScore?.toFixed(1) || '0.0'}/5.0
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {agent.metrics?.avgResponseTime?.toFixed(1) || '0.0'}s resp.
+                          {agent.metrics?.averageResponseTime?.toFixed(1) || '0.0'}s resp.
                         </p>
                       </div>
                     </div>

@@ -69,14 +69,15 @@ export const useTenants = (): UseTenantsReturn => {
         ...(currentTenant && { tenantId: currentTenant.id })
       });
 
-      if (response.success && response.data) {
-        const tenantsData = Array.isArray(response.data)
-          ? response.data
-          : (response.data.tenants || []);
+      if (response.success && response.data !== undefined) {
+        const data: any = response.data as any;
+        const tenantsData = Array.isArray(data)
+          ? data
+          : (data?.tenants || []);
 
         setTenants(tenantsData);
 
-        const paginationMeta = response.meta || response.data;
+        const paginationMeta = response.meta || (Array.isArray(data) ? undefined : data);
         if (paginationMeta) {
           setPagination({
             page: paginationMeta.page || 1,

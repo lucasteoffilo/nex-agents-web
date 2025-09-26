@@ -8,19 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Search, Bot, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import agentService from '@/services/agent-service';
+import agentService, { Agent } from '@/services/agent-service';
 import collectionService from '@/services/collection-service';
 
-interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  status: 'active' | 'inactive' | 'training';
-  description?: string;
-  conversations?: number;
-  successRate?: number;
-  lastUsed?: string;
-}
+// Usamos o tipo Agent do serviço para garantir compatibilidade
 
 interface LinkAgentDialogProps {
   collectionId: string;
@@ -52,7 +43,7 @@ export function LinkAgentDialog({ collectionId, onLinkSuccess, onClose }: LinkAg
         
         console.log('=== DEBUG VINCULAR AGENTE ===');
         console.log('Total de agentes carregados:', allAgents.length);
-        console.log('Agentes carregados:', allAgents.map(a => ({ id: a.id, name: a.name, collections: a.collections?.length || 0 })));
+        console.log('Agentes carregados:', allAgents.map(a => ({ id: a.id, name: a.name })));
         console.log('Agentes já vinculados (IDs):', linkedAgentIds);
         console.log('Resposta getCollectionAgents:', linkedResponse);
         
@@ -215,10 +206,10 @@ export function LinkAgentDialog({ collectionId, onLinkSuccess, onClose }: LinkAg
                       </p>
                     )}
                     
-                    {agent.successRate && (
+                    {agent.metrics?.successRate && (
                       <div className="flex items-center mt-2 text-xs text-muted-foreground">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        {agent.successRate}% de sucesso
+                        {agent.metrics.successRate}% de sucesso
                       </div>
                     )}
                   </div>

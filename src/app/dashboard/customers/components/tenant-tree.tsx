@@ -88,11 +88,7 @@ function TenantTreeNode({
             
             <Badge 
               variant={node.tenant.plan === 'enterprise' ? 'default' : 'outline'}
-              className={{
-                'bg-green-100 text-green-800': node.tenant.plan === 'pro',
-                'bg-purple-100 text-purple-800': node.tenant.plan === 'enterprise',
-                'text-xs': true,
-              }}
+              className={`${node.tenant.plan === 'pro' ? 'bg-green-100 text-green-800' : ''} ${node.tenant.plan === 'enterprise' ? 'bg-purple-100 text-purple-800' : ''} text-xs`}
             >
               {node.tenant.plan}
             </Badge>

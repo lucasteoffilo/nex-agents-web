@@ -233,7 +233,8 @@ class CollectionService {
   }
 
   async unlinkAgentFromCollection(agentId: string, collectionId: string): Promise<ApiResponse<void>> {
-    return apiService.delete(`/agents/${agentId}/collections`, { collectionIds: [collectionId] });
+    // Axios delete aceita body via config.data no nosso ApiService
+    return apiService.delete(`/agents/${agentId}/collections`, { data: { collectionIds: [collectionId] } });
   }
 
   async getCollectionAgents(collectionId: string): Promise<ApiResponse<{
@@ -264,7 +265,7 @@ class CollectionService {
           return hasCollection;
         });
         
-        console.log('Agentes com a coleção:', agentsWithCollection.map(a => ({ id: a.id, name: a.name })));
+        console.log('Agentes com a coleção:', agentsWithCollection.map((a: any) => ({ id: a.id, name: a.name })));
         
         return {
           success: true,

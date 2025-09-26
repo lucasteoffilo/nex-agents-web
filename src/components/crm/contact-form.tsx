@@ -30,8 +30,8 @@ export function ContactForm({ contact, onSave, onCancel, loading = false }: Cont
     website: contact?.website || '',
     type: contact?.type || 'lead',
     status: contact?.status || 'active',
-    source: contact?.source || '',
-    score: contact?.score || 0,
+    leadSource: contact?.leadSource || '',
+    leadScore: contact?.leadScore || 0,
     notes: contact?.notes || '',
     tags: contact?.tags || [],
     address: {
@@ -39,28 +39,28 @@ export function ContactForm({ contact, onSave, onCancel, loading = false }: Cont
       city: contact?.address?.city || '',
       state: contact?.address?.state || '',
       country: contact?.address?.country || 'Brasil',
-      zipCode: contact?.address?.zipCode || ''
+      postalCode: contact?.address?.postalCode || ''
     }
   });
 
   const [newTag, setNewTag] = useState('');
 
   const handleInputChange = (field: string, value: any) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
+    if (field.startsWith('address.')) {
+      const child = field.split('.')[1] as keyof typeof formData.address;
       setFormData(prev => ({
         ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
+        address: {
+          ...prev.address,
           [child]: value
         }
       }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value
-      }));
+      return;
     }
+    setFormData(prev => ({
+      ...prev,
+      [field as keyof typeof prev]: value
+    }));
   };
 
   const handleAddTag = () => {
@@ -218,11 +218,11 @@ export function ContactForm({ contact, onSave, onCancel, loading = false }: Cont
                 />
               </div>
               <div>
-                <Label htmlFor="zipCode">CEP</Label>
+                <Label htmlFor="postalCode">CEP</Label>
                 <Input
-                  id="zipCode"
-                  value={formData.address.zipCode}
-                  onChange={(e) => handleInputChange('address.zipCode', e.target.value)}
+                  id="postalCode"
+                  value={formData.address.postalCode}
+                  onChange={(e) => handleInputChange('address.postalCode', e.target.value)}
                 />
               </div>
             </div>
@@ -263,23 +263,23 @@ export function ContactForm({ contact, onSave, onCancel, loading = false }: Cont
                 </Select>
               </div>
               <div>
-                <Label htmlFor="score">Score (0-100)</Label>
+                <Label htmlFor="leadScore">Score (0-100)</Label>
                 <Input
-                  id="score"
+                  id="leadScore"
                   type="number"
                   min="0"
                   max="100"
-                  value={formData.score}
-                  onChange={(e) => handleInputChange('score', parseInt(e.target.value) || 0)}
+                  value={formData.leadScore}
+                  onChange={(e) => handleInputChange('leadScore', parseInt(e.target.value) || 0)}
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="source">Fonte</Label>
+              <Label htmlFor="leadSource">Fonte</Label>
               <Input
-                id="source"
-                value={formData.source}
-                onChange={(e) => handleInputChange('source', e.target.value)}
+                id="leadSource"
+                value={formData.leadSource}
+                onChange={(e) => handleInputChange('leadSource', e.target.value)}
                 placeholder="Ex: Website, LinkedIn, Indicação..."
               />
             </div>
