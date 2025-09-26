@@ -63,6 +63,7 @@ import { formatDate, formatRelativeTime, formatBytes } from '@/lib/utils';
 import Link from 'next/link';
 import { DocumentUpload } from '@/components/knowledge/document-upload';
 import { CollectionSettings } from '@/components/knowledge/collection-settings';
+import { LinkAgentDialog } from '@/components/knowledge/link-agent-dialog';
 
 /* ---------- Tipos locais ---------- */
 interface Document {
@@ -694,7 +695,21 @@ export default function CollectionDetailsPage() {
                               Configurar
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={async () => {
+                                try {
+                                  await collectionService.unlinkAgentFromCollection(agent.id, collectionId);
+                                  // Recarregar lista de agentes
+                                  const agentsResponse = await collectionService.getCollectionAgents(collectionId);
+                                  setAgents(agentsResponse.data?.agents || []);
+                                  toast.success('Agente desvinculado com sucesso!');
+                                } catch (error) {
+                                  console.error('Erro ao desvincular agente:', error);
+                                  toast.error('Erro ao desvincular agente');
+                                }
+                              }}
+                            >
                               <Unlink className="h-4 w-4 mr-2" />
                               Desvincular
                             </DropdownMenuItem>
@@ -836,6 +851,35 @@ export default function CollectionDetailsPage() {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para vincular agente */}
+      <Dialog open={isLinkAgentDialogOpen} onOpenChange={setIsLinkAgentDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Vincular Agente à Coleção</DialogTitle>
+            <DialogDescription>
+              Selecione um agente para vincular à coleção "{computedCollection.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <LinkAgentDialog
+            collectionId={computedCollection.id}
+            onLinkSuccess={async () => {
+              try {
+                setLoading(true);
+                const agentsResponse = await collectionService.getCollectionAgents(collectionId);
+                setAgents(agentsResponse.data?.agents || []);
+                toast.success('Agente vinculado com sucesso!');
+              } catch (error) {
+                console.error('Erro ao recarregar agentes:', error);
+                toast.error('Erro ao recarregar agentes');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            onClose={() => setIsLinkAgentDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

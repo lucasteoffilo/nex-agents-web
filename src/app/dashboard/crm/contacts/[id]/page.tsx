@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useContacts } from '@/hooks/useContacts';
+import { useContactActivities } from '@/hooks/useContactActivities';
+import { Contact } from '@/services/contact-service';
+import { ActivityForm } from '@/components/crm/activity-form';
 import {
   ArrowLeft,
   Edit,
@@ -23,148 +26,88 @@ import {
   Activity,
   Star,
   Save,
-  X
+  X,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
-import { formatDate, formatCurrency } from '@/lib/utils';
+import { formatDate, formatRelativeTime } from '@/lib/utils';
 import Link from 'next/link';
-
-interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  company: string;
-  position: string;
-  location: string;
-  source: string;
-  status: 'lead' | 'prospect' | 'customer' | 'inactive';
-  score: number;
-  createdAt: string;
-  lastContact: string;
-  assignedTo: string;
-  tags: string[];
-  notes: string;
-  avatar?: string;
-}
 
 interface Activity {
   id: string;
-  type: 'call' | 'email' | 'meeting' | 'note' | 'deal';
+  type: 'call' | 'email' | 'meeting' | 'note' | 'deal' | 'task' | 'follow_up' | 'proposal' | 'demo';
   title: string;
   description: string;
   date: string;
   user: string;
 }
 
-interface Deal {
-  id: string;
-  title: string;
-  value: number;
-  stage: string;
-  probability: number;
-  expectedCloseDate: string;
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'active':
+      return 'default';
+    case 'inactive':
+      return 'secondary';
+    case 'blocked':
+      return 'destructive';
+    case 'archived':
+      return 'outline';
+    default:
+      return 'secondary';
+  }
 }
 
-// Mock data - em um app real, isso viria de uma API
-const mockContact: Contact = {
-  id: 'contact-001',
-  name: 'João Silva',
-  email: 'joao.silva@empresa.com',
-  phone: '+55 11 99999-9999',
-  company: 'Tech Solutions Ltda',
-  position: 'CTO',
-  location: 'São Paulo, SP',
-  source: 'Website',
-  status: 'prospect',
-  score: 85,
-  createdAt: '2024-01-10T10:00:00Z',
-  lastContact: '2024-01-15T14:30:00Z',
-  assignedTo: 'Maria Santos',
-  tags: ['enterprise', 'tech', 'hot-lead'],
-  notes: 'Interessado em solução enterprise. Orçamento aprovado. Cliente muito engajado e com potencial para grandes projetos.'
-};
-
-const mockActivities: Activity[] = [
-  {
-    id: 'act-001',
-    type: 'call',
-    title: 'Ligação de Follow-up',
-    description: 'Discussão sobre requisitos técnicos e cronograma do projeto.',
-    date: '2024-01-16T14:30:00Z',
-    user: 'Maria Santos'
-  },
-  {
-    id: 'act-002',
-    type: 'email',
-    title: 'Proposta Enviada',
-    description: 'Enviada proposta comercial detalhada com escopo completo.',
-    date: '2024-01-15T10:15:00Z',
-    user: 'Maria Santos'
-  },
-  {
-    id: 'act-003',
-    type: 'meeting',
-    title: 'Reunião de Descoberta',
-    description: 'Reunião inicial para entender necessidades e dores do cliente.',
-    date: '2024-01-12T16:00:00Z',
-    user: 'Maria Santos'
-  },
-  {
-    id: 'act-004',
-    type: 'note',
-    title: 'Anotação',
-    description: 'Cliente demonstrou interesse em expandir para outras filiais.',
-    date: '2024-01-11T09:30:00Z',
-    user: 'Pedro Lima'
-  }
-];
-
-const mockDeals: Deal[] = [
-  {
-    id: 'deal-001',
-    title: 'Implementação Sistema ERP',
-    value: 150000,
-    stage: 'Proposta',
-    probability: 75,
-    expectedCloseDate: '2024-02-15T00:00:00Z'
-  },
-  {
-    id: 'deal-002',
-    title: 'Consultoria Técnica',
-    value: 25000,
-    stage: 'Qualificação',
-    probability: 60,
-    expectedCloseDate: '2024-03-01T00:00:00Z'
-  }
-];
-
-function getStatusColor(status: Contact['status']) {
+function getStatusLabel(status: string) {
   switch (status) {
+    case 'active':
+      return 'Ativo';
+    case 'inactive':
+      return 'Inativo';
+    case 'blocked':
+      return 'Bloqueado';
+    case 'archived':
+      return 'Arquivado';
+    default:
+      return status;
+  }
+}
+
+function getTypeColor(type: string) {
+  switch (type) {
     case 'lead':
-      return 'default';
+      return 'secondary';
     case 'prospect':
       return 'warning';
     case 'customer':
       return 'success';
-    case 'inactive':
+    case 'partner':
+      return 'default';
+    case 'vendor':
+      return 'outline';
+    case 'other':
       return 'secondary';
     default:
       return 'secondary';
   }
 }
 
-function getStatusLabel(status: Contact['status']) {
-  switch (status) {
+function getTypeLabel(type: string) {
+  switch (type) {
     case 'lead':
       return 'Lead';
     case 'prospect':
       return 'Prospect';
     case 'customer':
       return 'Cliente';
-    case 'inactive':
-      return 'Inativo';
+    case 'partner':
+      return 'Parceiro';
+    case 'vendor':
+      return 'Fornecedor';
+    case 'other':
+      return 'Outro';
     default:
-      return status;
+      return type;
   }
 }
 
@@ -180,6 +123,14 @@ function getActivityIcon(type: Activity['type']) {
       return <FileText className="h-4 w-4" />;
     case 'deal':
       return <DollarSign className="h-4 w-4" />;
+    case 'task':
+      return <Activity className="h-4 w-4" />;
+    case 'follow_up':
+      return <RefreshCw className="h-4 w-4" />;
+    case 'proposal':
+      return <FileText className="h-4 w-4" />;
+    case 'demo':
+      return <MessageSquare className="h-4 w-4" />;
     default:
       return <Activity className="h-4 w-4" />;
   }
@@ -197,6 +148,14 @@ function getActivityColor(type: Activity['type']) {
       return 'bg-gray-100 text-gray-600';
     case 'deal':
       return 'bg-yellow-100 text-yellow-600';
+    case 'task':
+      return 'bg-purple-100 text-purple-600';
+    case 'follow_up':
+      return 'bg-orange-100 text-orange-600';
+    case 'proposal':
+      return 'bg-indigo-100 text-indigo-600';
+    case 'demo':
+      return 'bg-pink-100 text-pink-600';
     default:
       return 'bg-gray-100 text-gray-600';
   }
@@ -204,7 +163,102 @@ function getActivityColor(type: Activity['type']) {
 
 export default function ContactDetailPage({ params }: { params: { id: string } }) {
   const [isEditing, setIsEditing] = useState(false);
-  const [contact, setContact] = useState(mockContact);
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const { fetchContact, updateContact } = useContacts();
+  const { activities, stats: activityStats, loading: activitiesLoading, createActivity } = useContactActivities({ 
+    contactId: params.id 
+  });
+
+  useEffect(() => {
+    const loadContact = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const contactData = await fetchContact(params.id);
+        if (contactData) {
+          setContact(contactData);
+        } else {
+          setError('Contato não encontrado');
+        }
+      } catch (err) {
+        setError('Erro ao carregar contato');
+        console.error('Error loading contact:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params.id) {
+      loadContact();
+    }
+  }, [params.id, fetchContact]);
+
+  const handleSave = async () => {
+    if (!contact) return;
+    
+    try {
+      setSaving(true);
+      const updatedContact = await updateContact(contact.id, {
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        email: contact.email,
+        phone: contact.phone,
+        mobile: contact.mobile,
+        company: contact.company,
+        position: contact.position,
+        leadSource: contact.leadSource,
+        type: contact.type,
+        status: contact.status,
+        leadScore: contact.leadScore,
+        tags: contact.tags,
+        notes: contact.notes,
+        address: contact.address
+      });
+      
+      if (updatedContact) {
+        setContact(updatedContact);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      setError('Erro ao salvar contato');
+      console.error('Error saving contact:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="h-5 w-5 animate-spin" />
+          <span>Carregando contato...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !contact) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Erro ao carregar contato</h3>
+          <p className="text-muted-foreground mb-4">{error || 'Contato não encontrado'}</p>
+          <Link href="/dashboard/crm/contacts">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar para Contatos
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -218,7 +272,9 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{contact.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {contact.firstName} {contact.lastName}
+            </h1>
             <p className="text-muted-foreground">
               {contact.position} na {contact.company}
             </p>
@@ -231,9 +287,9 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={() => setIsEditing(false)}>
+              <Button onClick={handleSave} disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar
+                {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </>
           ) : (
@@ -257,32 +313,87 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
               {isEditing ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
-                    <Input id="name" value={contact.name} onChange={(e) => setContact({...contact, name: e.target.value})} />
+                    <Label htmlFor="firstName">Nome</Label>
+                    <Input 
+                      id="firstName" 
+                      value={contact.firstName} 
+                      onChange={(e) => setContact({...contact, firstName: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Sobrenome</Label>
+                    <Input 
+                      id="lastName" 
+                      value={contact.lastName} 
+                      onChange={(e) => setContact({...contact, lastName: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value={contact.email} onChange={(e) => setContact({...contact, email: e.target.value})} />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={contact.email} 
+                      onChange={(e) => setContact({...contact, email: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Telefone</Label>
-                    <Input id="phone" value={contact.phone} onChange={(e) => setContact({...contact, phone: e.target.value})} />
+                    <Label htmlFor="phone">Telefone Fixo</Label>
+                    <Input 
+                      id="phone" 
+                      value={contact.phone || ''} 
+                      onChange={(e) => setContact({...contact, phone: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mobile">Celular</Label>
+                    <Input 
+                      id="mobile" 
+                      value={contact.mobile || ''} 
+                      onChange={(e) => setContact({...contact, mobile: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company">Empresa</Label>
-                    <Input id="company" value={contact.company} onChange={(e) => setContact({...contact, company: e.target.value})} />
+                    <Input 
+                      id="company" 
+                      value={contact.company || ''} 
+                      onChange={(e) => setContact({...contact, company: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="position">Cargo</Label>
-                    <Input id="position" value={contact.position} onChange={(e) => setContact({...contact, position: e.target.value})} />
+                    <Input 
+                      id="position" 
+                      value={contact.position || ''} 
+                      onChange={(e) => setContact({...contact, position: e.target.value})} 
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="location">Localização</Label>
-                    <Input id="location" value={contact.location} onChange={(e) => setContact({...contact, location: e.target.value})} />
+                    <Label htmlFor="leadSource">Origem</Label>
+                    <Input 
+                      id="leadSource" 
+                      value={contact.leadSource || ''} 
+                      onChange={(e) => setContact({...contact, leadSource: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="leadScore">Score</Label>
+                    <Input 
+                      id="leadScore" 
+                      type="number" 
+                      value={contact.leadScore || 0} 
+                      onChange={(e) => setContact({...contact, leadScore: parseInt(e.target.value) || 0})} 
+                    />
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <Label htmlFor="notes">Observações</Label>
-                    <Textarea id="notes" value={contact.notes} onChange={(e) => setContact({...contact, notes: e.target.value})} rows={3} />
+                    <Textarea 
+                      id="notes" 
+                      value={contact.notes || ''} 
+                      onChange={(e) => setContact({...contact, notes: e.target.value})} 
+                      rows={3} 
+                    />
                   </div>
                 </div>
               ) : (
@@ -291,22 +402,36 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                     <Mail className="h-4 w-4 text-muted-foreground" />
                     <span>{contact.email}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.company}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.position}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{contact.location}</span>
-                  </div>
+                  {contact.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>Tel: {contact.phone}</span>
+                    </div>
+                  )}
+                  {contact.mobile && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>Cel: {contact.mobile}</span>
+                    </div>
+                  )}
+                  {contact.company && (
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <span>{contact.company}</span>
+                    </div>
+                  )}
+                  {contact.position && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>{contact.position}</span>
+                    </div>
+                  )}
+                  {contact.address && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{contact.address.city}, {contact.address.state}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span>Criado em {formatDate(contact.createdAt)}</span>
@@ -322,85 +447,64 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
             </CardContent>
           </Card>
 
-          {/* Abas de Conteúdo */}
-          <Tabs defaultValue="activities" className="w-full">
-            <TabsList>
-              <TabsTrigger value="activities">Atividades</TabsTrigger>
-              <TabsTrigger value="deals">Deals</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="activities" className="space-y-4">
-              <Card>
+          {/* Seção de Atividades */}
+          <Card>
                 <CardHeader>
-                  <CardTitle>Histórico de Atividades</CardTitle>
-                  <CardDescription>
-                    Todas as interações com este contato
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Histórico de Atividades</CardTitle>
+                      <CardDescription>
+                        Todas as interações com este contato
+                      </CardDescription>
+                    </div>
+                    <ActivityForm
+                      contactId={params.id}
+                      userId="current-user" // TODO: Get from auth context
+                      onCreateActivity={async (activityData) => {
+                        await createActivity(activityData);
+                      }}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {mockActivities.map((activity) => (
-                      <div key={activity.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                        <div className={`p-2 rounded-full ${getActivityColor(activity.type)}`}>
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-medium">{activity.title}</h4>
-                            <span className="text-sm text-muted-foreground">
-                              {formatDate(activity.date)}
-                            </span>
+                  {activitiesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin" />
+                      <span className="ml-2">Carregando atividades...</span>
+                    </div>
+                  ) : activities.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhuma atividade registrada ainda.</p>
+                      <p className="text-sm">Adicione uma nova atividade para começar o histórico.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {activities.map((activity) => (
+                        <div key={activity.id} className="flex items-start gap-4 p-4 border rounded-lg">
+                          <div className={`p-2 rounded-full ${getActivityColor(activity.type as Activity['type'])}`}>
+                            {getActivityIcon(activity.type as Activity['type'])}
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            Por {activity.user}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="deals" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Deals Relacionados</CardTitle>
-                  <CardDescription>
-                    Oportunidades de vendas com este contato
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockDeals.map((deal) => (
-                      <div key={deal.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{deal.title}</h4>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span>{formatCurrency(deal.value)}</span>
-                            <span>•</span>
-                            <span>{deal.stage}</span>
-                            <span>•</span>
-                            <span>{deal.probability}% probabilidade</span>
-                            <span>•</span>
-                            <span>Fecha em {formatDate(deal.expectedCloseDate)}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium">{activity.title}</h4>
+                              <span className="text-sm text-muted-foreground">
+                                {formatDate(activity.activityDate)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {activity.description}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Por {activity.userId}
+                            </p>
                           </div>
                         </div>
-                        <Link href={`/dashboard/crm/deals/${deal.id}`}>
-                          <Button variant="ghost" size="sm">
-                            Ver Deal
-                          </Button>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
         </div>
 
         {/* Sidebar */}
@@ -409,6 +513,12 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
           <Card>
             <CardContent className="p-6">
               <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Tipo</p>
+                  <Badge variant={getTypeColor(contact.type) as any}>
+                    {getTypeLabel(contact.type)}
+                  </Badge>
+                </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-2">Status</p>
                   <Badge variant={getStatusColor(contact.status) as any}>
@@ -419,65 +529,51 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                   <p className="text-sm font-medium text-muted-foreground mb-2">Score</p>
                   <div className="flex items-center gap-2">
                     <Star className="h-4 w-4 text-yellow-500" />
-                    <span className="font-medium">{contact.score}%</span>
+                    <span className="font-medium">{contact.leadScore || 0}%</span>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Responsável</p>
-                  <p className="text-sm">{contact.assignedTo}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Origem</p>
-                  <p className="text-sm">{contact.source}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">Último Contato</p>
-                  <p className="text-sm">{formatDate(contact.lastContact)}</p>
-                </div>
+                {contact.assignedTo && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Responsável</p>
+                    <p className="text-sm">
+                      {contact.assignedTo.firstName} {contact.assignedTo.lastName}
+                    </p>
+                  </div>
+                )}
+                {contact.leadSource && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Origem</p>
+                    <p className="text-sm">{contact.leadSource}</p>
+                  </div>
+                )}
+                {contact.lastContactAt && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">Último Contato</p>
+                    <p className="text-sm">{formatDate(contact.lastContactAt)}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* Tags */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {contact.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {contact.tags && contact.tags.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tags</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {contact.tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Ações Rápidas */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button className="w-full" variant="outline">
-                <Phone className="h-4 w-4 mr-2" />
-                Ligar
-              </Button>
-              <Button className="w-full" variant="outline">
-                <Mail className="h-4 w-4 mr-2" />
-                Enviar Email
-              </Button>
-              <Button className="w-full" variant="outline">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Adicionar Nota
-              </Button>
-              <Button className="w-full" variant="outline">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Criar Deal
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

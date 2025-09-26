@@ -23,111 +23,13 @@ import {
 } from 'lucide-react';
 import { formatNumber, formatPercentage, formatRelativeTime } from '@/lib/utils';
 import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
+import { useAgents } from '@/hooks/use-agents';
+import { useTenants } from '@/hooks/use-tenants';
+import { useChats } from '@/hooks/use-chats';
 
-// Dados mockados para demonstração
-const mockMetrics = {
-  conversations: {
-    total: 1247,
-    active: 23,
-    resolved: 1224,
-    change: 12.5,
-  },
-  agents: {
-    total: 8,
-    active: 6,
-    training: 1,
-    offline: 1,
-  },
-  documents: {
-    total: 156,
-    processed: 142,
-    processing: 8,
-    failed: 6,
-  },
-  satisfaction: {
-    score: 4.8,
-    total: 892,
-    change: 2.3,
-  },
-  responseTime: {
-    average: 2.4,
-    change: -8.7,
-  },
-  resolutionRate: {
-    rate: 94.2,
-    change: 1.8,
-  },
-};
+// Dados reais serão calculados dinamicamente
 
-const mockRecentActivity = [
-  {
-    id: '1',
-    type: 'chat',
-    title: 'Nova conversa iniciada',
-    description: 'Cliente João Silva iniciou um chat',
-    time: new Date(Date.now() - 5 * 60 * 1000),
-    status: 'active',
-  },
-  {
-    id: '2',
-    type: 'document',
-    title: 'Documento processado',
-    description: 'Manual_Produto_v2.pdf foi processado com sucesso',
-    time: new Date(Date.now() - 15 * 60 * 1000),
-    status: 'success',
-  },
-  {
-    id: '3',
-    type: 'agent',
-    title: 'Agente treinado',
-    description: 'Agente de Vendas concluiu treinamento',
-    time: new Date(Date.now() - 30 * 60 * 1000),
-    status: 'success',
-  },
-  {
-    id: '4',
-    type: 'ticket',
-    title: 'Ticket resolvido',
-    description: 'Ticket #1234 foi marcado como resolvido',
-    time: new Date(Date.now() - 45 * 60 * 1000),
-    status: 'success',
-  },
-  {
-    id: '5',
-    type: 'error',
-    title: 'Falha no processamento',
-    description: 'Erro ao processar documento_grande.pdf',
-    time: new Date(Date.now() - 60 * 60 * 1000),
-    status: 'error',
-  },
-];
-
-const mockTopAgents = [
-  {
-    id: '1',
-    name: 'Agente de Vendas',
-    conversations: 156,
-    satisfaction: 4.9,
-    responseTime: 1.8,
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Suporte Técnico',
-    conversations: 89,
-    satisfaction: 4.7,
-    responseTime: 2.1,
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: 'Atendimento Geral',
-    conversations: 234,
-    satisfaction: 4.6,
-    responseTime: 2.8,
-    status: 'training',
-  },
-];
+// Dados mockados removidos - agora usando dados reais dos hooks
 
 interface MetricCardProps {
   title: string;
@@ -223,9 +125,44 @@ function getStatusColor(status: string) {
 
 export default function DashboardPage() {
   const { user, tenant, permissions, isLoading: authLoading, isInitialized } = useMultiTenantAuth();
+  
+  // Hooks para dados reais
+  const { agents, stats: agentStats, loading: agentsLoading } = useAgents({ autoFetch: true });
+  const { tenants, loading: tenantsLoading } = useTenants();
+  const { chats, loading: chatsLoading } = useChats();
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [debugInfo, setDebugInfo] = useState({ cookies: '', localStorage: '' });
+
+  // Calcular métricas reais
+  const realMetrics = {
+    conversations: {
+      total: chats?.length || 0,
+      active: chats?.filter(chat => chat.status === 'active').length || 0,
+      resolved: chats?.filter(chat => chat.status === 'resolved').length || 0,
+    },
+    agents: {
+      total: agents?.length || 0,
+      active: agents?.filter(agent => agent.status === 'active').length || 0,
+      training: agents?.filter(agent => agent.status === 'training').length || 0,
+      offline: agents?.filter(agent => agent.status === 'inactive').length || 0,
+    },
+    customers: {
+      total: tenants?.length || 0,
+      active: tenants?.filter(tenant => (tenant as any).status === 'active' || tenant.isActive).length || 0,
+      inactive: tenants?.filter(tenant => (tenant as any).status !== 'active' && !tenant.isActive).length || 0,
+    },
+    satisfaction: {
+      score: agentStats?.avgSatisfaction || 0,
+      total: agentStats?.totalConversations || 0,
+    },
+    responseTime: {
+      average: agentStats?.avgResponseTime || 0,
+    },
+    resolutionRate: {
+      rate: agentStats?.resolutionRate || 0,
+    },
+  };
 
   useEffect(() => {
     // Debug: verificar dados do auth provider
@@ -309,34 +246,30 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Conversas Ativas"
-          value={mockMetrics.conversations.active}
-          description={`${mockMetrics.conversations.total} total`}
+          value={realMetrics.conversations.active}
+          description={`${realMetrics.conversations.total} total`}
           icon={MessageSquare}
-          change={mockMetrics.conversations.change}
-          trend="up"
           color="blue"
         />
         <MetricCard
           title="Agentes Ativos"
-          value={`${mockMetrics.agents.active}/${mockMetrics.agents.total}`}
-          description="2 em treinamento"
+          value={`${realMetrics.agents.active}/${realMetrics.agents.total}`}
+          description={`${realMetrics.agents.training} em treinamento`}
           icon={Bot}
           color="green"
         />
         <MetricCard
-          title="Documentos"
-          value={mockMetrics.documents.processed}
-          description={`${mockMetrics.documents.processing} processando`}
-          icon={FileText}
+          title="Clientes"
+          value={realMetrics.customers.active}
+          description={`${realMetrics.customers.total} total`}
+          icon={Users}
           color="primary"
         />
         <MetricCard
           title="Satisfação"
-          value={`${mockMetrics.satisfaction.score}/5.0`}
-          description={`${mockMetrics.satisfaction.total} avaliações`}
+          value={`${realMetrics.satisfaction.score.toFixed(1)}/5.0`}
+          description={`${realMetrics.satisfaction.total} conversas`}
           icon={TrendingUp}
-          change={mockMetrics.satisfaction.change}
-          trend="up"
           color="yellow"
         />
       </div>
@@ -352,12 +285,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {mockMetrics.responseTime.average}s
+              {realMetrics.responseTime.average.toFixed(1)}s
             </div>
             <div className="flex items-center mt-2">
               <ArrowDownRight className="h-3 w-3 text-green-500 mr-1" />
               <span className="text-xs font-medium text-green-600">
-                {formatPercentage(Math.abs(mockMetrics.responseTime.change) / 100, 1)}
+                Tempo médio
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
                 melhoria
@@ -375,12 +308,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {formatPercentage(mockMetrics.resolutionRate.rate / 100, 1)}
+              {realMetrics.resolutionRate.rate.toFixed(1)}%
             </div>
             <div className="flex items-center mt-2">
               <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
               <span className="text-xs font-medium text-green-600">
-                {formatPercentage(mockMetrics.resolutionRate.change / 100, 1)}
+                Taxa atual
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">
                 vs. mês anterior
@@ -392,16 +325,16 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-[#0072b9]" />
-              <span>Usuários Online</span>
+              <MessageSquare className="h-5 w-5 text-green-500" />
+              <span>Conversas Resolvidas</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              47
+              {realMetrics.conversations.resolved}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              +12 desde ontem
+              {realMetrics.conversations.total > 0 ? formatPercentage(realMetrics.conversations.resolved / realMetrics.conversations.total) : '0'}% do total
             </div>
           </CardContent>
         </Card>
@@ -419,24 +352,64 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockRecentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className={`p-2 rounded-lg ${getStatusColor(activity.status)}`}>
-                    <ActivityIcon type={activity.type} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {activity.title}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {formatRelativeTime(activity.time)}
-                    </p>
-                  </div>
+              {agentsLoading || tenantsLoading || chatsLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Carregando atividades...</p>
                 </div>
-              ))}
+              ) : (
+                <>
+                  {agents?.slice(0, 3).map((agent) => (
+                    <div key={agent.id} className="flex items-start space-x-3">
+                      <div className="p-2 rounded-full bg-purple-100 text-purple-600">
+                        <Bot className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          Agente {agent.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Status: {agent.status === 'active' ? 'Ativo' : agent.status === 'training' ? 'Treinando' : 'Inativo'}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {formatRelativeTime(agent.updatedAt)}
+                        </p>
+                      </div>
+                      <Badge variant={agent.status === 'active' ? 'default' : 'secondary'}>
+                        {agent.status === 'active' ? 'Ativo' : agent.status === 'training' ? 'Treinando' : 'Inativo'}
+                      </Badge>
+                    </div>
+                  ))}
+                  
+                  {tenants?.slice(0, 2).map((tenant) => (
+                    <div key={tenant.id} className="flex items-start space-x-3">
+                      <div className="p-2 rounded-full bg-blue-100 text-blue-600">
+                        <Users className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          Cliente {tenant.name}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {tenant.slug}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {formatRelativeTime(tenant.updatedAt)}
+                        </p>
+                      </div>
+                      <Badge variant={(tenant as any).status === 'active' || tenant.isActive ? 'default' : 'secondary'}>
+                        {(tenant as any).status === 'active' || tenant.isActive ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </div>
+                  ))}
+                  
+                  {agents?.length === 0 && tenants?.length === 0 && (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">Nenhuma atividade recente</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -451,38 +424,49 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockTopAgents.map((agent, index) => (
-                <div key={agent.id} className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">
-                        {index + 1}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {agent.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {agent.conversations} conversas
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={agent.status === 'active' ? 'default' : 'secondary'}>
-                      {agent.status === 'active' ? 'Ativo' : 'Treinando'}
-                    </Badge>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {agent.satisfaction}/5.0
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {agent.responseTime}s resp.
-                      </p>
-                    </div>
-                  </div>
+              {agentsLoading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Carregando agentes...</p>
                 </div>
-              ))}
+              ) : agents && agents.length > 0 ? (
+                agents.slice(0, 5).map((agent, index) => (
+                  <div key={agent.id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg flex items-center justify-center">
+                        <span className="text-white font-bold text-sm">
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {agent.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {agent.type} • {agent.metrics?.totalConversations || 0} conversas
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={agent.status === 'active' ? 'default' : 'secondary'}>
+                        {agent.status === 'active' ? 'Ativo' : agent.status === 'training' ? 'Treinando' : 'Inativo'}
+                      </Badge>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {agent.metrics?.avgSatisfaction?.toFixed(1) || '0.0'}/5.0
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {agent.metrics?.avgResponseTime?.toFixed(1) || '0.0'}s resp.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">Nenhum agente encontrado</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

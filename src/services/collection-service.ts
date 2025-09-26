@@ -229,11 +229,63 @@ class CollectionService {
 
   // Operações de agentes
   async linkAgentToCollection(agentId: string, collectionId: string): Promise<ApiResponse<void>> {
-    return apiService.post(`/agents/${agentId}/collections/${collectionId}`);
+    return apiService.post(`/agents/${agentId}/collections`, { collectionIds: [collectionId] });
   }
 
   async unlinkAgentFromCollection(agentId: string, collectionId: string): Promise<ApiResponse<void>> {
-    return apiService.delete(`/agents/${agentId}/collections/${collectionId}`);
+    return apiService.delete(`/agents/${agentId}/collections`, { collectionIds: [collectionId] });
+  }
+
+  async getCollectionAgents(collectionId: string): Promise<ApiResponse<{
+    agents: any[];    
+  }>> {
+    try {
+      // Buscar todos os agentes e filtrar os que têm esta coleção
+      const agentsResponse = await apiService.get('/agents?limit=100');
+      if (agentsResponse.success && agentsResponse.data?.agents) {
+        // Filtrar agentes que têm esta coleção vinculada
+        const agentsWithCollection = agentsResponse.data.agents.filter((agent: any) => {
+          // Verificar se o agente tem a coleção em knowledgeBase.selectedCollections ou collections
+          const knowledgeBaseSelectedCollections = agent.knowledgeBase?.selectedCollections || [];
+          const hasInKnowledgeBase = knowledgeBaseSelectedCollections.includes(collectionId);
+          const hasInCollections = agent.collections && agent.collections.some((col: any) => col.id === collectionId);
+          const hasCollection = hasInKnowledgeBase || hasInCollections;
+          
+          console.log(`Agente ${agent.name}:`, {
+            knowledgeBaseSelectedCollections,
+            collections: agent.collections?.map((c: any) => ({ id: c.id, name: c.name })) || [],
+            hasInKnowledgeBase,
+            hasInCollections,
+            hasCollection,
+            collectionId,
+            'collectionId === knowledgeBaseSelectedCollections[0]': collectionId === knowledgeBaseSelectedCollections[0],
+            'collectionId === collections[0].id': agent.collections?.[0] ? collectionId === agent.collections[0].id : false
+          });
+          return hasCollection;
+        });
+        
+        console.log('Agentes com a coleção:', agentsWithCollection.map(a => ({ id: a.id, name: a.name })));
+        
+        return {
+          success: true,
+          data: { agents: agentsWithCollection },
+          message: 'Agentes da coleção carregados'
+        };
+      }
+      
+      return {
+        success: true,
+        data: { agents: [] },
+        message: 'Nenhum agente encontrado'
+      };
+    } catch (error) {
+      console.error('Erro ao buscar agentes da coleção:', error);
+      return {
+        success: false,
+        data: { agents: [] },
+        message: 'Erro ao carregar agentes da coleção'
+      };
+    }
   }
 
   async getAgentCollections(agentId: string): Promise<ApiResponse<Collection[]>> {

@@ -35,7 +35,7 @@ import { useMultiTenantAuth } from '@/providers/multi-tenant-auth-provider';
 
 interface SidebarItem {
   title: string;
-  href: string;
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   children?: SidebarItem[];
@@ -110,23 +110,23 @@ const sidebarItems: SidebarItem[] = [
     //   },
     // ],
   },
-  // {
-  //   title: 'CRM',
-  //   href: '/dashboard/crm',
-  //   icon: Users,
-  //   children: [
-  //     {
-  //       title: 'Contatos',
-  //       href: '/dashboard/crm/contacts',
-  //       icon: Users,
-  //     },
-  //     {
-  //       title: 'Deals',
-  //       href: '/dashboard/crm/deals',
-  //       icon: Users,
-  //     },
-  //   ],
-  // },
+  {
+    title: 'CRM',
+    // href: '/dashboard/crm',
+    icon: Users,
+    children: [
+      {
+        title: 'Contatos',
+        href: '/dashboard/crm/contacts',
+        icon: Users,
+      },
+      // {
+      //   title: 'Deals',
+      //   href: '/dashboard/crm/deals',
+      //   icon: Users,
+      // },
+    ],
+  },
   // {
   //   title: 'Analytics',
   //   href: '/dashboard/analytics',
@@ -160,7 +160,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           pathname === child.href || pathname.startsWith(child.href + '/')
         );
         
-        if (hasActiveChild) {
+        if (hasActiveChild && item.href) {
           itemsToExpand.push(item.href);
         }
       }
@@ -180,7 +180,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   };
 
-  const isActive = (href: string, item?: SidebarItem) => {
+  const isActive = (href?: string, item?: SidebarItem) => {
+    if (!href) return false;
+    
     if (href === '/dashboard') {
       return pathname === '/dashboard';
     }
@@ -225,7 +227,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const SidebarItem = ({ item, level = 0 }: { item: SidebarItem; level?: number }) => {
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedItems.includes(item.href);
+    const itemKey = item.href || item.title;
+    const isExpanded = expandedItems.includes(itemKey);
     const active = isActive(item.href);
 
     return (
@@ -233,39 +236,58 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="relative">
           {hasChildren ? (
             <div className="flex items-center">
-              <Link
-                href={item.href}
-                className={cn(
-                  'flex-1 flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group',
-                  level > 0 && 'ml-4 pl-6',
-                  active
-                    ? 'bg-brand-500 text-brand-foreground shadow-lg shadow-brand-500/25'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className={cn(
-                  'h-5 w-5 transition-colors',
-                  active ? 'text-white' : 'text-gray-500 dark:text-gray-400'
-                )} />
-                <span>{item.title}</span>
-                {item.badge && (
-                  <Badge 
-                    variant={active ? "secondary" : "default"} 
-                    className="ml-auto text-xs"
-                  >
-                    {item.badge}
-                  </Badge>
-                )}
-              </Link>
+              {item.href ? (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex-1 flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group',
+                    level > 0 && 'ml-4 pl-6',
+                    active
+                      ? 'bg-brand-500 text-brand-foreground shadow-lg shadow-brand-500/25'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <item.icon className={cn(
+                    'h-5 w-5 transition-colors',
+                    active ? 'text-white' : 'text-gray-500 dark:text-gray-400'
+                  )} />
+                  <span>{item.title}</span>
+                  {item.badge && (
+                    <Badge 
+                      variant={active ? "secondary" : "default"} 
+                      className="ml-auto text-xs"
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </Link>
+              ) : (
+                <div
+                  className={cn(
+                    'flex-1 flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group cursor-pointer',
+                    level > 0 && 'ml-4 pl-6',
+                    'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
+                  )}
+                >
+                  <item.icon className="h-5 w-5 transition-colors text-gray-500 dark:text-gray-400" />
+                  <span>{item.title}</span>
+                  {item.badge && (
+                    <Badge 
+                      variant="default" 
+                      className="ml-auto text-xs"
+                    >
+                      {item.badge}
+                    </Badge>
+                  )}
+                </div>
+              )}
               <button
-                onClick={() => toggleExpanded(item.href)}
+                onClick={() => toggleExpanded(itemKey)}
                 className={cn(
                   'p-2 rounded-lg transition-all duration-200',
                   level > 0 && 'mr-4',
-                  active
-                    ? 'text-white hover:bg-brand-600'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 )}
               >
                 <ChevronDown className={cn(
@@ -274,21 +296,21 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 )} />
               </button>
             </div>
-          ) : (
+          ) : item.href ? (
             <Link
               href={item.href}
               className={cn(
-                'flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 group',
+                'flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group relative overflow-hidden',
                 level > 0 && 'ml-4 pl-6',
                 active
-                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/25'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-brand-500/10 dark:hover:bg-brand-500/10'
+                  ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/25'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-brand-500/10 hover:to-brand-600/10 dark:hover:from-brand-500/10 dark:hover:to-brand-600/10 hover:shadow-md'
               )}
               onClick={() => setSidebarOpen(false)}
             >
               <item.icon className={cn(
-                'h-5 w-5 transition-colors',
-                active ? 'text-white' : 'text-gray-500 dark:text-gray-400'
+                'h-5 w-5 transition-all duration-200 group-hover:scale-110',
+                active ? 'text-white' : 'text-gray-500 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400'
               )} />
               <span>{item.title}</span>
               {item.badge && (
@@ -300,6 +322,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Badge>
               )}
             </Link>
+          ) : (
+            <div
+              className={cn(
+                'flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group relative overflow-hidden',
+                level > 0 && 'ml-4 pl-6',
+                'text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-brand-500/10 hover:to-brand-600/10 dark:hover:from-brand-500/10 dark:hover:to-brand-600/10 hover:shadow-md'
+              )}
+            >
+              <item.icon className="h-5 w-5 transition-all duration-200 group-hover:scale-110 text-gray-500 dark:text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+              <span>{item.title}</span>
+              {item.badge && (
+                <Badge 
+                  variant="default" 
+                  className="ml-auto text-xs"
+                >
+                  {item.badge}
+                </Badge>
+              )}
+            </div>
           )}
         </div>
         
@@ -326,25 +367,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Sidebar */}
       <div className={cn(
-        'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0',
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50 transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-xl',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <Image
-                src="/nex-logo.png"
-                alt="NEX Platform"
-                width={120}
-                height={32}
-                className="h-8 w-auto"
-              />
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <Link href="/dashboard" className="flex items-center group">
+              <div className="relative">
+                <Image
+                  src="/nex-logo.png"
+                  alt="NEX Platform"
+                  width={120}
+                  height={32}
+                  className="h-8 w-auto transition-transform duration-200 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-brand-500/10 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              </div>
             </Link>
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => setSidebarOpen(false)}
             >
               <X className="h-5 w-5" />
@@ -352,20 +396,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
             {sidebarItems.map((item) => (
               <SidebarItem key={item.href} item={item} />
             ))}
           </nav>
 
           {/* User menu */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
-              <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-white" />
+          <div className="p-4 border-t border-gray-200/50 dark:border-gray-700/50">
+            <div className="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-700 transition-all duration-200 group">
+              <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-200">
+                <User className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                   {user?.firstName || 'Usuário'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -376,7 +420,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 variant="ghost"
                 size="icon"
                 onClick={logout}
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -388,8 +432,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="lg:ml-64">
         {/* Top bar */}
-        <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16">
-          <div className="flex items-center justify-between h-full px-4">
+        <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200/50 dark:border-gray-700/50 h-16 shadow-sm">
+          <div className="flex items-center justify-between h-full px-6">
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
@@ -406,19 +450,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <input
                   type="text"
                   placeholder="Buscar..."
-                  className="pl-10 pr-4 py-2 w-64 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-2.5 w-72 text-sm border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50/50 dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500/50 transition-all duration-200 backdrop-blur-sm"
                 />
               </div>
             </div>
 
             <div className="flex items-center space-x-2">
               {/* Theme toggle */}
-              <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg p-1">
+              <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-xl p-1 bg-gray-50/50 dark:bg-gray-700/50 backdrop-blur-sm">
                 <Button
                   variant={theme === 'light' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTheme('light')}
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
+                    theme === 'light' 
+                      ? 'bg-brand-500 text-white shadow-sm' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 >
                   <Sun className="h-4 w-4" />
                 </Button>
@@ -426,7 +474,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   variant={theme === 'system' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTheme('system')}
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
+                    theme === 'system' 
+                      ? 'bg-brand-500 text-white shadow-sm' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 >
                   <Monitor className="h-4 w-4" />
                 </Button>
@@ -434,16 +486,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   variant={theme === 'dark' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => setTheme('dark')}
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 rounded-lg transition-all duration-200 ${
+                    theme === 'dark' 
+                      ? 'bg-brand-500 text-white shadow-sm' 
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
                 >
                   <Moon className="h-4 w-4" />
                 </Button>
               </div>
 
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+                onClick={() => {
+                  // TODO: Implementar dropdown de notificações
+                  console.log('Notificações clicadas');
+                }}
+              >
                 <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full flex items-center justify-center font-medium shadow-lg animate-pulse">
                   3
                 </span>
               </Button>

@@ -64,7 +64,7 @@ function handleApiError(error: AxiosError): AppError {
 }
 
 // Configuração base da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.nexagentes.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 const WORKER_BASE_URL = process.env.NEXT_PUBLIC_WORKER_URL || 'http://localhost:3002';
 
 // Instância principal da API

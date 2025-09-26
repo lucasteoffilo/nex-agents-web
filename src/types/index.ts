@@ -94,9 +94,10 @@ export interface Tenant {
   name: string;
   slug: string;
   logo?: string;
-  plan: 'free' | 'pro' | 'enterprise';
+  plan?: 'free' | 'pro' | 'enterprise';
   settings: TenantSettings;
   isActive: boolean;
+  status?: 'active' | 'inactive' | 'suspended';
   // Hierarquia de tenants
   parentTenantId?: string; // null para tenant raiz
   tenantPath: string; // ex: "root" ou "root/client1/subclient1"
